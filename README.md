@@ -1,2 +1,9 @@
 # not-or.jp
-nor. website source
+
+Source for https://not-or.jp/
+
+## Status
+WIP
+
+## Deploy
+Manual (Sakura hosting)
