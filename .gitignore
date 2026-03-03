@@ -1,0 +1,18 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# VS Code (必要なら共有するので基本は無視)
+.vscode/
+
+# WordPress: secrets / runtime
+wp/wp-config.php
+wp/wp-content/uploads/
+wp/wp-content/cache/
+wp/wp-content/upgrade/
+
+# Logs
+*.log
+
+# Node (もし使うなら)
+node_modules/

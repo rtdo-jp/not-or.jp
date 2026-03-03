@@ -1,0 +1,639 @@
+@charset "UTF-8";
+
+/*
+  File: nor.tokens.css
+  Author: Ryousuke Tamura
+  Created: 2026-1-2
+  Update: 2026-1-23
+  Note: Design tokens for nør.
+*/
+
+:root {
+  /* ========================================
+
+    Colors
+
+  ======================================== */
+
+  /*
+    Base
+  ======================================== */
+  --color-base-000: #f8fafc;
+  --color-base-050: #eef2f7;
+  --color-base-100: #e2e8f0;
+  --color-base-200: #cbd5e1;
+  --color-base-300: #94a3b8;
+  --color-base-400: #64748b;
+  --color-base-500: #475569;
+  --color-base-600: #334155;
+  --color-base-700: #1e293b;
+  --color-base-800: #0f172a;
+  --color-base-900: #020617;
+
+  /* Paper / Ink (site-specific neutrals) */
+  --color-base-ffb: #fffffb;
+  --color-base-00b: #00000b;
+
+  /*
+    Tone
+  ======================================== */
+  /* State */
+  --color-tone-danger: #d73945;
+  --color-tone-warning: #86742d;
+  --color-tone-success: #0c883b;
+  --color-tone-focus: #64dded;
+
+  /* Links */
+  --color-tone-link-light: #1a0dab;
+  --color-tone-visited-light: #681da8;
+  --color-tone-link-dark: #8ab4f8;
+  --color-tone-visited-dark: #c58af9;
+
+  /* Doc-specific */
+  --color-doc-assistant: #1557ff;
+  --color-doc-variant: #8a38f5;
+
+  /*
+    Mode
+  ======================================== */
+  /* Light
+  ----------------- */
+  /* Surfaces */
+  --color-surface-0: var(--color-base-000);
+  --color-surface-1: var(--color-base-050);
+  --color-surface-2: var(--color-base-200);
+  --color-surface-disabled: var(--color-base-100);
+  --color-surface-inverse: var(--color-base-900);
+
+  /* Text on surface */
+  --color-on-surface-0: var(--color-base-900);
+  --color-on-surface-1: var(--color-base-700);
+  --color-on-surface-2: var(--color-base-300);
+  --color-on-surface-disabled: var(--color-base-300);
+
+  /* Text on inverse surface */
+  --color-on-inverse-0: var(--color-base-050);
+
+  /* Borders */
+  --color-border-0: var(--color-base-300);
+  --color-border-active: var(--color-tone-link-light);
+  --color-border-disabled: var(--color-base-200);
+  --color-border-focus: var(--color-tone-focus);
+
+  /* Links */
+  --color-link-default: var(--color-tone-link-light);
+  --color-link-visited: var(--color-tone-visited-light);
+
+  /* Status */
+  --color-status-danger: var(--color-tone-danger);
+  --color-status-warning: var(--color-tone-warning);
+  --color-status-success: var(--color-tone-success);
+
+  /* Dark
+  ----------------- */
+  /* Surfaces */
+  --color-surface-0-dark: var(--color-base-900);
+  --color-surface-1-dark: var(--color-base-800);
+  --color-surface-2-dark: var(--color-base-700);
+  --color-surface-disabled-dark: var(--color-base-500);
+  --color-surface-inverse-dark: var(--color-base-000);
+
+  /* Text on surface */
+  --color-on-surface-0-dark: var(--color-base-050);
+  --color-on-surface-1-dark: var(--color-base-300);
+  --color-on-surface-2-dark: var(--color-base-500);
+  --color-on-surface-disabled-dark: var(--color-base-600);
+
+  /* Text on inverse surface */
+  --color-on-inverse-0-dark: var(--color-base-900);
+
+  /* Borders */
+  --color-border-0-dark: var(--color-base-600);
+  --color-border-active-dark: var(--color-tone-link-dark);
+  --color-border-disabled-dark: var(--color-base-800);
+  --color-border-focus-dark: var(--color-tone-focus);
+
+  /* Links */
+  --color-link-default-dark: var(--color-tone-link-dark);
+  --color-link-visited-dark: var(--color-tone-visited-dark);
+
+  /* Status */
+  --color-status-danger-dark: var(--color-tone-danger);
+  --color-status-warning-dark: var(--color-tone-warning);
+  --color-status-success-dark: var(--color-tone-success);
+
+  /*
+    Alias
+  ======================================== */
+  --color-surface-bg: var(--color-surface-0);
+  --color-surface-card: var(--color-surface-1);
+  --color-surface-elevated: var(--color-surface-2);
+  --color-surface-disabled-current: var(--color-surface-disabled);
+  --color-surface-inverse-current: var(--color-surface-inverse);
+  --color-surface-control: var(--color-base-ffb);
+
+  --color-text-main: var(--color-on-surface-0);
+  --color-text-sub: var(--color-on-surface-1);
+  --color-text-muted: var(--color-on-surface-2);
+  --color-text-muted-static: var(--color-on-surface-2);
+  --color-text-disabled: var(--color-on-surface-disabled);
+  --color-text-on-inverse: var(--color-on-inverse-0);
+
+  --color-border-current: var(--color-border-0);
+  --color-border-current-active: var(--color-border-active);
+  --color-border-current-disabled: var(--color-border-disabled);
+  --color-border-current-focus: var(--color-border-focus);
+
+  --color-link-current: var(--color-link-default);
+  --color-link-current-visited: var(--color-link-visited);
+
+  --color-status-current-danger: var(--color-status-danger);
+  --color-status-current-warning: var(--color-status-warning);
+  --color-status-current-success: var(--color-status-success);
+  --color-surface-inverse-static: var(--color-surface-inverse);
+
+  /* Note: Doc */
+  --color-surface-middle-head: var(--color-base-ffb);
+
+  /*
+    Accent
+  ======================================== */
+  --color-surface-accent: var(--color-tone-link-light);
+  --color-text-on-accent: var(--color-on-inverse-0);
+
+  /* ========================================
+
+    Spacing
+
+  ======================================== */
+
+  --space-none: 0;
+  --space-0: 0.2rem;
+  --space-1: 0.4rem;
+  --space-2: 0.8rem;
+  --space-3: 1.2rem;
+  --space-4: 1.6rem;
+  --space-6: 2.4rem;
+  --space-8: 3.2rem;
+  --space-10: 4.0rem;
+  --space-12: 4.8rem;
+  --space-14: 5.6rem;
+  --space-16: 6.4rem;
+  --space-18: 7.2rem;
+  --space-20: 8.0rem;
+  --space-24: 9.6rem;
+  --space-30: 12.0rem;
+
+  /* ========================================
+
+    Typography
+
+  ======================================== */
+
+  /*
+    Font size
+  ======================================== */
+  --type-micro-size: 1.0rem;
+  --type-small-size: 1.2rem;
+  --type-base-size: 1.4rem;
+
+  /*
+    Font weights
+  ======================================== */
+  --type-weight-light: 300;
+  --type-weight-regular: 400;
+  --type-weight-medium: 500;
+  --type-weight-bold: 700;
+
+  /*
+    Line heights
+  ======================================== */
+  --type-lh-tight: 1;
+  --type-lh-compact: 1.2;
+  --type-lh-normal: 1.4;
+  --type-lh-relaxed: 1.6;
+  --type-lh-loose: 1.8;
+
+  /*
+    Adjust
+  ======================================== */
+  --type-lh-adjust-1: 0.48;
+  --type-lh-adjust-2: 0.72;
+
+  /*
+    Alias
+  ======================================== */
+  --type-ui-weight: var(--type-weight-regular);
+  --type-ui-lh: var(--type-lh-tight); /* ボタン/ナビ等 */
+  --type-label-lh: var(--type-lh-compact); /* ラベル/短文 */
+  --type-note-lh: var(--type-lh-normal); /* 注釈/説明 */
+  --type-body-lh: var(--type-lh-relaxed); /* 本文 */
+  --type-body-lh-loose: var(--type-lh-loose); /* 本文（ゆったり） */
+
+  /* Card title */
+  --type-card-title-size: 2.4rem;
+  --type-card-title-weight: var(--type-weight-light);
+  --type-card-title-lh: var(--type-lh-tight);
+
+  /* Content title */
+  --type-content-title-size: 3.2rem;
+  --type-content-title-weight: var(--type-weight-light);
+  --type-content-title-lh: var(--type-lh-compact);
+
+  /* Logos */
+  --type-logo-head-size: 4.0rem;
+  --type-logo-head-weight: var(--type-weight-bold);
+  --type-logo-head-lh: var(--type-lh-adjust-1);
+  --type-logo-sign-size: 4.8rem;
+  --type-logo-sign-weight: var(--type-weight-bold);
+  --type-logo-sign-lh: var(--type-lh-adjust-2);
+
+  /* Counts */
+  --type-count-l-size: 7.2rem;
+  --type-count-l-weight: var(--type-weight-light);
+  --type-count-l-lh: var(--type-lh-tight);
+  --type-count-m-size: 4.8rem;
+  --type-count-m-weight: var(--type-weight-light);
+  --type-count-m-lh: var(--type-lh-adjust-2);
+
+  /* Visual */
+  --type-visual-size: 6.4rem;
+  --type-visual-weight: var(--type-weight-light);
+  --type-visual-lh: var(--type-lh-tight);
+  --type-visual-xl-size: 14.4rem;
+  --type-visual-xl-weight: var(--type-weight-light);
+  --type-visual-xl-lh: var(--type-lh-tight);
+
+  /* ========================================
+
+    Tighten / Optical / Visual
+
+  ======================================== */
+
+  /*
+    Tighten
+  ======================================== */
+  --tighten-none: 0rem;
+  --tighten-1: -0.1rem;
+  --tighten-2: -0.2rem;
+  --tighten-3: -0.3rem;
+  --tighten-4: -0.4rem;
+  --tighten-5: -0.5rem;
+  --tighten-6: -0.6rem;
+  --tighten-7: -0.7rem;
+  --tighten-8: -0.8rem;
+  --tighten-9: -0.9rem;
+  --tighten-10: -1.0rem;
+  --tighten-11: -1.1rem;
+  --tighten-12: -1.2rem;
+
+  --tighten-mobile-1: -0.1rem;
+  --tighten-mobile-2: -0.2rem;
+  --tighten-mobile-3: -0.2rem;
+
+  /*
+    Optical
+  ======================================== */
+  --optical-none: 0;
+  --optical-1: 0.1rem;
+  --optical-2: 0.2rem;
+  --optical-3: 0.3rem;
+  --optical-4: 0.4rem;
+  --optical-5: 0.5rem;
+  --optical-6: 0.6rem;
+  --optical-7: 0.7rem;
+  --optical-8: 0.8rem;
+  --optical-9: 0.9rem;
+  --optical-10: 1.0rem;
+  --optical-11: 1.1rem;
+  --optical-12: 1.2rem;
+
+  /*
+    Visual
+  ======================================== */
+  /* Mobile */
+  --visual-mobile-top-top: -0.8rem;
+  --visual-mobile-bottom-left: -25.2rem;
+  --visual-mobile-bottom-top: 0;
+  --visual-mobile-shift-x: 100px;
+  --visual-mobile-reach-y: 400px;
+
+  /* Tablet */
+  --visual-tablet-top-top: -6.8rem;
+  --visual-tablet-bottom-top: 4.8rem;
+  --visual-tablet-bottom-left: -56.8rem;
+  --visual-tablet-shift-x: 140px;
+  --visual-tablet-reach-y: 500px;
+
+  /* Desktop */
+  --visual-desktop-top-top: -6.8rem;
+  --visual-desktop-top-left: 13.4rem;
+  --visual-desktop-bottom-top: 4.8rem;
+  --visual-desktop-bottom-left: -1.2rem;
+  --visual-desktop-shift-x: 200px;
+  --visual-desktop-reach-y: 600px;
+
+  /* ========================================
+
+    Size
+
+  ======================================== */
+
+  --size-none: 0;
+  --size-4: 0.4rem;
+  --size-6: 0.6rem;
+  --size-8: 0.8rem;
+  --size-10: 1.0rem;
+  --size-12: 1.2rem;
+  --size-16: 1.6rem;
+  --size-20: 2.0rem;
+  --size-26: 2.6rem;
+  --size-32: 3.2rem;
+  --size-48: 4.8rem;
+  --size-120: 12.0rem;
+
+  /* ========================================
+
+    Radius
+
+  ======================================== */
+
+  --radius-none: 0;
+  --radius-xs: 0.2rem;
+  --radius-s: 0.4rem;
+  --radius-m: 0.8rem;
+  --radius-l: 1.2rem;
+  --radius-xl: 1.6rem;
+  --radius-full: 9999px;
+
+  /* ========================================
+
+    Border
+
+  ======================================== */
+
+  --border-none: 0;
+  --border-1: 1px;
+  --border-2: 2px;
+  --border-4: 4px;
+  --border-8: 8px;
+
+  /* ========================================
+
+    Opacity
+
+  ======================================== */
+
+  --opacity-none: 0;
+  --opacity-overlay: 0.24;
+  --opacity-hover: 0.80;
+  --opacity-full: 1;
+
+  /* ========================================
+
+    Motion Duration
+
+  ======================================== */
+
+  --motion-duration-xs: 120ms;
+  --motion-duration-s: 180ms;
+  --motion-duration-m: 240ms;
+  --motion-duration-l: 320ms;
+  --motion-duration-xl: 640ms;
+
+  /* ========================================
+
+    Layer
+
+  ======================================== */
+
+  --layer-base: 0;
+  --layer-overlay: 10;
+  --layer-toast: 20;
+  --layer-loading: 90;
+
+  /* ========================================
+
+    Breakpoints
+
+  ======================================== */
+
+  --bp-desktop-width: 1440px;
+  --bp-desktop-min: 1024px;
+  --bp-tablet-width: 768px;
+  --bp-tablet-min: 600px;
+  --bp-mobile-width: 392px;
+  --bp-mobile-max: 599px;
+
+  /* ========================================
+
+    Layout
+
+  ======================================== */
+
+  --layout-none: 0;
+
+  /* Column Width */
+  --layout-base-column: 8.4rem;
+
+  /* Column Height */
+  --layout-hero-minh-s: 20.0rem;
+  --layout-hero-minh-m: 24.0rem;
+  --layout-hero-minh-l: 44.0rem;
+
+  /* Column gap */
+  --layout-mobile-gap: var(--space-2); /* 0.8rem */
+  --layout-tablet-gap: var(--space-6); /* 2.4rem */
+  --layout-desktop-gap: var(--space-8); /* 3.2rem */
+
+  /* Row gap */
+  --layout-section-gap-s: var(--space-10); /* 4.0rem */
+  --layout-section-gap-m: var(--space-20); /* 8.0rem */
+  --layout-section-gap-l: var(--space-30); /* 12.0rem */
+
+  /* Column + Column Gap
+  ----------------- */
+  /* Mobile */
+  --layout-mobile-column-1: 9.2rem;
+  --layout-mobile-column-2: 17.6rem;
+  --layout-mobile-column-3: 26.8rem;
+
+  /* Tablet */
+  --layout-tablet-column-1: 10.8rem;
+  --layout-tablet-column-2: 19.2rem;
+  --layout-tablet-column-3: 21.6rem;
+  --layout-tablet-column-4: 30.0rem;
+
+  /* Desktop */
+  --layout-desktop-column-1: 11.6rem;
+  --layout-desktop-column-2: 20.0rem;
+  --layout-desktop-column-3: 23.2rem;
+  --layout-desktop-column-4: 31.6rem;
+  --layout-desktop-column-5: 34.8rem;
+  --layout-desktop-column-6: 43.2rem;
+  --layout-desktop-column-7: 46.4rem;
+  --layout-desktop-column-8: 54.8rem;
+  --layout-desktop-column-9: 58.0rem;
+  --layout-desktop-column-10: 66.0rem;
+  --layout-desktop-column-11: 66.4rem;
+  --layout-desktop-column-12: 69.6rem;
+  --layout-desktop-column-13: 78.0rem;
+
+  /* Container
+  ----------------- */
+  --layout-container-mobile: 39.2rem;
+  --layout-container-tablet: 76.8rem;
+  --layout-container-desktop: 144.0rem;
+
+  /* ========================================
+
+    UI Specific
+
+  ======================================== */
+
+  /* Element */
+  --element-gap-xs: var(--space-1);
+  --element-gap-s: var(--space-2);
+  --element-gap-sm: var(--space-3);
+  --element-gap-m: var(--space-4);
+  --element-gap-l: var(--space-6);
+  --element-gap-xl: var(--space-8);
+
+  /* Shape */
+  --shape-pad-xs: var(--space-1);
+  --shape-pad-s: var(--space-2);
+  --shape-pad-m: var(--space-3);
+  --shape-pad-l: var(--space-4);
+  --shape-pad-xl: var(--space-8);
+  --shape-pad-xxl: var(--space-10);
+
+  --shape-inset-s: var(--space-1);
+
+  /* Field message / Announcement */
+  --field-message-mark-w: 1.6em;
+  --field-message-mark-gap: 0.12em;
+  --field-message-mark-gap-multiplier: 7.2;
+  --announcement-message-icon-space: 1.4em;
+  --announcement-error-item-py: 0.4em;
+
+  /* Containers */
+  --container-max: var(--layout-container-mobile);
+  --container-px: var(--space-4);
+
+  /* Stroke */
+  --stroke-1: var(--border-1) solid;
+
+  /* Divider */
+  --divider-color: var(--color-border-current);
+  --divider-1: var(--stroke-1) var(--divider-color);
+
+  /* Card */
+  --card-divider: var(--divider-1);
+
+  /* Control */
+  --control-border-color: var(--divider-color);
+
+  /* Status */
+  --status-accent: var(--color-border-current);
+  --status-bg: transparent;
+  --status-fg: inherit;
+  --status-icon: "";
+
+  /* Focus ring */
+  --focus-ring: 0 0 0 2px var(--color-border-current-focus);
+}
+
+/* Dark mode (alias override)
+---------------------------------------- */
+[data-theme="dark"] {
+  --color-surface-bg: var(--color-surface-0-dark);
+  --color-surface-card: var(--color-surface-1-dark);
+  --color-surface-elevated: var(--color-surface-2-dark);
+  --color-surface-disabled-current: var(--color-surface-disabled-dark);
+  --color-surface-inverse-current: var(--color-surface-inverse-dark);
+  --color-surface-control: var(--color-base-00b);
+
+  --color-text-main: var(--color-on-surface-0-dark);
+  --color-text-sub: var(--color-on-surface-1-dark);
+  --color-text-muted: var(--color-on-surface-2-dark);
+  --color-text-disabled: var(--color-on-surface-disabled-dark);
+  --color-text-on-inverse: var(--color-on-inverse-0-dark);
+
+  --color-border-current: var(--color-border-0-dark);
+  --color-border-current-active: var(--color-border-active-dark);
+  --color-border-current-disabled: var(--color-border-disabled-dark);
+  --color-border-current-focus: var(--color-border-focus-dark);
+
+  --color-link-current: var(--color-link-default-dark);
+  --color-link-current-visited: var(--color-link-visited-dark);
+
+  --color-status-current-danger: var(--color-status-danger-dark);
+  --color-status-current-warning: var(--color-status-warning-dark);
+  --color-status-current-success: var(--color-status-success-dark);
+
+  /* Note: Doc */
+  --color-surface-middle-head: var(--color-base-00b);
+
+  /* Accent */
+  --color-surface-accent: var(--color-tone-link-dark);
+  --color-text-on-accent: var(--color-on-inverse-0-dark);
+}
+
+/* Auto theme (OS preference) - only when data-theme is NOT set
+---------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --color-surface-bg: var(--color-surface-0-dark);
+    --color-surface-card: var(--color-surface-1-dark);
+    --color-surface-elevated: var(--color-surface-2-dark);
+    --color-surface-disabled-current: var(--color-surface-disabled-dark);
+    --color-surface-inverse-current: var(--color-surface-inverse-dark);
+    --color-surface-control: var(--color-base-00b);
+
+    --color-text-main: var(--color-on-surface-0-dark);
+    --color-text-sub: var(--color-on-surface-1-dark);
+    --color-text-muted: var(--color-on-surface-2-dark);
+    --color-text-disabled: var(--color-on-surface-disabled-dark);
+    --color-text-on-inverse: var(--color-on-inverse-0-dark);
+
+    --color-border-current: var(--color-border-0-dark);
+    --color-border-current-active: var(--color-border-active-dark);
+    --color-border-current-disabled: var(--color-border-disabled-dark);
+    --color-border-current-focus: var(--color-border-focus-dark);
+
+    --color-link-current: var(--color-link-default-dark);
+    --color-link-current-visited: var(--color-link-visited-dark);
+
+    --color-status-current-danger: var(--color-status-danger-dark);
+    --color-status-current-warning: var(--color-status-warning-dark);
+    --color-status-current-success: var(--color-status-success-dark);
+
+    --color-surface-middle-head: var(--color-base-00b);
+    --color-surface-accent: var(--color-tone-link-dark);
+    --color-text-on-accent: var(--color-on-inverse-0-dark);
+  }
+}
+
+/* ========================================
+
+  Responsive
+
+======================================== */
+
+/* Tablet (600px〜1023px)
+---------------------------------------- */
+@media (min-width: 600px) and (max-width: 1023px) {
+  :root {
+    --container-max: var(--layout-container-tablet);
+    --container-px: var(--space-18);
+  }
+}
+
+/* Desktop (1024px〜)
+---------------------------------------- */
+@media (min-width: 1024px) {
+  :root {
+    --container-max: var(--layout-container-desktop);
+    --container-px: var(--space-10);
+  }
+}

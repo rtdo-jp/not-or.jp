@@ -1,0 +1,367 @@
+@charset "UTF-8";
+
+/*
+  File: nor.base.css
+  Author: Ryousuke Tamura
+  Created: 2026-1-2
+  Update: 2026-1-23
+  Note: Base styles for nør.
+*/
+
+/* ========================================
+
+  Mini reset
+
+======================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+/* ========================================
+
+  Elements
+
+======================================== */
+
+html {
+  font-size: 62.5%;
+
+  /* Prevent layout/scroll drift on reload by making features deterministic early */
+  font-feature-settings: "palt";
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--color-surface-bg);
+  color: var(--color-text-main);
+  font-family:
+    "Inter",
+    "Noto Sans JP",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-feature-settings: inherit;
+
+  /* Avoid incremental scroll anchoring shifts when fonts/features apply */
+  overflow-anchor: none;
+  font-size: 1.6rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.inner {
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: var(--container-px);
+}
+
+/* ========================================
+
+  Inline semantics
+
+======================================== */
+
+:root {
+  --font-mono:
+    "Source Code Pro",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
+}
+
+/* Italic semantics */
+i,
+em,
+dfn {
+  font-style: italic;
+  margin-inline-start: var(--tighten-1);
+  margin-inline-end: var(--optical-2);
+}
+
+/* Citation / title label: keep roman */
+cite {
+  font-style: normal;
+}
+
+/* Strong emphasis */
+strong {
+  font-weight: var(--type-weight-bold);
+}
+
+/* Definitions: keep it readable */
+dfn {
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-xs);
+  font-size: 0.96em;
+  font-weight: var(--type-weight-bold);
+  background-color: var(--color-surface-card);
+}
+
+/* Machine-readable values */
+time,
+data {
+  font-variant-numeric: tabular-nums;
+}
+
+/* mono (mechanical text) */
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
+  font-weight: var(--type-weight-regular);
+}
+
+/* Code-like inline text */
+code,
+samp,
+kbd {
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-xs);
+  font-size: 0.96em;
+  font-variant-ligatures: none;
+  background-color: var(--color-surface-elevated);
+}
+
+/* Prefer readable quoting */
+q {
+  font-style: normal;
+  quotes: none;
+}
+
+q::before,
+q::after {
+  content: "";
+  content: none;
+}
+
+/* ========================================
+
+  Links
+
+======================================== */
+
+a {
+  text-decoration: none;
+  text-underline-offset: 0.15em;
+  color: var(--color-link-current);
+}
+
+a,
+.btn,
+.logo {
+  transition:
+    background-color var(--motion-duration-s) ease-out,
+    opacity var(--motion-duration-s) ease-out,
+    box-shadow var(--motion-duration-s) ease-out;
+}
+
+a:visited {
+  text-decoration: none;
+  color: var(--color-link-current-visited);
+}
+
+a:hover {
+  text-decoration: underline;
+  color: var(--color-border-current-active);
+}
+
+a:focus-visible {
+  outline: none;
+  text-decoration: underline;
+}
+
+a img {
+  transition: transform var(--motion-duration-s) ease;
+}
+
+a:hover img {
+  transform: scale(1.02);
+}
+
+/* ========================================
+
+  Headings & Text
+
+======================================== */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 500;
+  color: var(--color-text-main);
+}
+
+p {
+  margin-block: var(--space-2);
+  color: var(--color-text-sub);
+}
+
+h1 {
+  font-size: 2.4rem;
+  line-height: 1.3;
+}
+
+h2 {
+  font-size: 2.0rem;
+  line-height: 1.3;
+}
+
+h3 {
+  font-size: 1.8rem;
+  line-height: 1.4;
+}
+
+h4 {
+  font-size: 1.6rem;
+  line-height: 1.4;
+}
+
+h5 {
+  font-size: 1.4rem;
+  line-height: 1.4;
+}
+
+h6 {
+  font-size: 1.2rem;
+  line-height: 1.4;
+}
+
+/* ========================================
+
+  Focus / accessibility helpers
+
+======================================== */
+
+.skip {
+  position: absolute;
+  z-index: var(--layer-overlay);
+  inset-block-start: var(--space-2);
+  inset-inline-start: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-s);
+  background-color: var(--color-surface-inverse-current);
+  color: var(--color-text-on-inverse);
+  transform: translateY(-150%);
+}
+
+.skip:focus-visible {
+  transform: translateY(0);
+}
+
+:focus-visible {
+  outline: var(--border-2) solid var(--color-border-current-focus);
+  outline-offset: 0;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  white-space: nowrap;
+  clip: rect(0 0 0 0);
+}
+
+/* ========================================
+
+  Responsive line break utilities
+
+======================================== */
+
+br.mobile {
+  display: inline;
+}
+
+br.tablet,
+br.desktop {
+  display: none;
+}
+
+/* Tablet (600px〜1023px)
+---------------------------------------- */
+@media (min-width: 600px) and (max-width: 1023px) {
+  br.mobile {
+    display: none;
+  }
+
+  br.tablet {
+    display: inline;
+  }
+}
+
+/* Desktop (1024px〜)
+---------------------------------------- */
+@media (min-width: 1024px) {
+  br.mobile,
+  br.tablet {
+    display: none;
+  }
+
+  br.desktop {
+    display: inline;
+  }
+}

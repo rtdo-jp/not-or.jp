@@ -1,0 +1,1817 @@
+<!doctype html>
+<html lang="ja" class="no-js" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Notes | nør.</title>
+<meta name="description" content="サイト仕様・配信モデル・設計体系・計測結果・技術的帰属を記録する技術ノート。 | Technical notes on specifications, delivery model, design system, diagnostics, and attributions.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="format-detection" content="telephone=no">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<link rel="canonical" href="https://not-or.jp/notes/">
+
+<meta property="og:url" content="https://not-or.jp/notes/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Notes | nør.">
+<meta property="og:description" content="サイト仕様・配信モデル・設計体系・計測結果・技術的帰属を記録する技術ノート。 | Technical notes on specifications, delivery model, design system, diagnostics, and attributions.">
+<meta property="og:site_name" content="nør.">
+<meta property="og:image" content="https://not-or.jp/assets/img/og-notes.png">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@not-or">
+<meta name="twitter:title" content="Notes | nør.">
+<meta name="twitter:description" content="サイト仕様・配信モデル・設計体系・計測結果・技術的帰属を記録する技術ノート。 | Technical notes on specifications, delivery model, design system, diagnostics, and attributions.">
+<meta name="twitter:image" content="https://not-or.jp/assets/img/og-notes.png">
+
+<link rel="icon" type="image/svg+xml" href="./assets/img/favicon.svg">
+<link rel="icon" sizes="any" href="./assets/img/favicon.ico">
+<link rel="apple-touch-icon" href="./assets/img/apple-touch-icon.png">
+<link rel="manifest" href="./manifest.webmanifest">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&family=Noto+Sans+JP:wght@300;400;700&family=Source+Code+Pro:wght@400&display=fallback" rel="stylesheet">
+
+<link rel="stylesheet" href="./assets/css/nor.tokens.css">
+<link rel="stylesheet" href="./assets/css/nor.base.css">
+<link rel="stylesheet" href="./assets/css/nor.ui.css">
+
+<script>
+  document.documentElement.classList.remove('no-js');
+</script>
+
+<script>
+  (function () {
+    const KEY = "nor.themeMode.v1";
+    const saved = (function () {
+      try { return localStorage.getItem(KEY); } catch (e) {}
+      try { return sessionStorage.getItem(KEY); } catch (e) {}
+      return null;
+    })();
+    const mode = (String(saved || "auto").trim().toLowerCase());
+    const mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+    const systemTheme = mq && mq.matches ? "dark" : "light";
+    const theme = (mode === "light" || mode === "dark") ? mode : systemTheme;
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.style.backgroundColor = (theme === "dark") ? "#020617" : "#F8FAFC";
+  })();
+</script>
+
+<style>
+  html { background-color: #f8fafc; color: #020617; }
+  @media (prefers-color-scheme: dark) {
+    html { background-color: #020617; color: #eef2f7; }
+  }
+  html[data-theme="light"] { background-color: #f8fafc; color: #020617; }
+  html[data-theme="dark"] { background-color: #020617; color: #eef2f7; }
+</style>
+
+<script src="./assets/js/nor.js" defer></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://not-or.jp/#website",
+      "url": "https://not-or.jp/",
+      "name": "nør.",
+      "inLanguage": ["ja", "en"],
+      "publisher": { "@id": "https://not-or.jp/#organization" },
+      "potentialAction": [
+        {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://not-or.jp/search/?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://not-or.jp/notes/#webpage",
+      "url": "https://not-or.jp/notes/",
+      "name": "Notes | nør.",
+      "description": [
+        {"@value": "サイト仕様・配信モデル・設計体系・計測結果・技術的帰属を記録する技術ノート。", "@language": "ja"},
+        {"@value": "Technical notes on specifications, delivery model, design system, diagnostics, and attributions.", "@language": "en"}
+      ],
+      "inLanguage": ["ja", "en"],
+      "isPartOf": { "@id": "https://not-or.jp/#website" },
+      "about": { "@id": "https://not-or.jp/#organization" },
+      "publisher": { "@id": "https://not-or.jp/#organization" },
+      "primaryImageOfPage": { "@id": "https://not-or.jp/notes/#primaryimage" },
+      "breadcrumb": { "@id": "https://not-or.jp/notes/#breadcrumb" }
+    },
+    {
+      "@type": "ImageObject",
+      "@id": "https://not-or.jp/notes/#primaryimage",
+      "url": "https://not-or.jp/assets/img/og-notes.png"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://not-or.jp/notes/#breadcrumb",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://not-or.jp/" },
+        { "@type": "ListItem", "position": 2, "name": "Notes", "item": "https://not-or.jp/notes/" }
+      ]
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://not-or.jp/#organization",
+      "name": "nør.",
+      "url": "https://not-or.jp/"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://not-or.jp/#person",
+      "name": "Ryousuke Tamura"
+    }
+  ]
+}
+</script>
+</head>
+<body id="top" class="pages">
+<a href="#site-main" class="skip"><span lang="ja">本文へ移動</span> / <span lang="en">Skip to main content</span></a>
+
+<!-- site-head -->
+<header id="site-head">
+  <div class="inner">
+    <p class="tagline">Graphic &amp; Web Design. <br>Not OR. Just right.</p>
+    <div class="logo"><a href="/">nør.</a></div>
+    <nav class="gnav" aria-label="Global navigation">
+      <ul class="nav-list">
+        <li><a href="/">Home</a></li>
+        <li><a href="/categories/">Categories</a></li>
+        <li><a href="/tags/">Tags</a></li>
+        <li><a href="/archives/">Archives</a></li>
+        <li><a href="/clients/">Clients</a></li>
+        <li><a href="/search/">Search</a></li>
+      </ul>
+      <div>
+        <ul class="nav-list">
+          <li><a href="/about/">About</a></li>
+          <li><a href="/policies/">Policies</a></li>
+          <li><a href="/notes/" aria-current="page">Notes</a></li>
+        </ul>
+        <ul class="nav-list">
+          <li><a href="/faqs/">FAQs</a></li>
+          <li><a href="/contact/">Contact</a></li>
+        </ul>
+      </div>
+    </nav>
+    <div class="cookie-agree" hidden>
+      <p><a href="/policies/" class="cookie-agree-link"><span class="cookie-agree-icon" aria-hidden="true">🍪</span>Cookies &amp; Privacy</a></p>
+    </div>
+  </div>
+</header>
+
+<!-- site-main -->
+<main id="site-main" tabindex="-1">
+  <section class="hero">
+    <div class="inner">
+      <div class="identity">
+        <div class="name">
+          <p class="ja" lang="ja">田村綾佑デザイン事務所</p>
+          <p class="en" lang="en">Ryousuke Tamura <br>Design Office</p>
+          <p class="author">nør.</p>
+        </div>
+        <div class="stats">
+          <p class="pair"><data class="count" value="521">521</data><span class="unit">works archived.</span></p>
+          <p class="permission">Visuals appear only <br>with client permission. <br>Otherwise, entries remain <br>as <strong>text — never lost</strong>.</p>
+        </div>
+      </div>
+      <div class="localize">
+        <hgroup class="specific">
+          <h1>Notes</h1>
+          <p class="tagline">Specifications, design system, diagnostics, and notices.</p>
+        </hgroup>
+        <div class="textpair">
+          <p class="ja" lang="ja">サイト仕様・配信モデル・設計体系・<br class="desktop tablet">計測結果・技術的帰属を記録する技術ノート。</p>
+          <p class="en" lang="en">Technical notes on specifications, delivery model, design system, <br class="desktop tablet">diagnostics, and attributions.</p>
+        </div>
+      </div>
+    </div>
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li><span aria-current="page">Notes</span></li>
+      </ol>
+    </nav>
+  </section>
+
+  <section class="section content-pages content-notes">
+    <h2 class="visually-hidden"><span lang="ja">技術ノート</span>（<span lang="en">Technical Notes</span>）</h2>
+    <div class="inner">
+
+      <!-- content-notes -->
+      <section class="content notes major">
+        <header class="head">
+          <h3 class="index" id="major-heading-structure"><span class="value">Structure</span></h3>
+        </header>
+        <div class="body">
+          <div class="textpair">
+            <p class="ja" lang="ja">情報設計と公開エンドポイントを整理し、検索性と機械判読性の前提を定義。</p>
+            <p class="en" lang="en">Information architecture and public endpoints — the baseline for search and machine readability.</p>
+          </div>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Taxonomy</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value"><a href="/categories/"><code>/categories/</code></a></span></dt>
+                <dd class="ja" lang="ja">制作分野別の分類</dd>
+                <dd class="en" lang="en">Classification by design discipline</dd>
+              </dl>
+              <dl>
+                <dt><span class="value"><a href="/tags/"><code>/tags/</code></a></span></dt>
+                <dd class="ja" lang="ja">媒体・役割・使用ツールなどの詳細分類</dd>
+                <dd class="en" lang="en">Detailed classification by medium, roles, and tools</dd>
+              </dl>
+              <dl>
+                <dt><span class="value"><a href="/archives/"><code>/archives/</code></a></span></dt>
+                <dd class="ja" lang="ja">制作・公開年による時系列整理</dd>
+                <dd class="en" lang="en">Chronological organization by year of creation or release</dd>
+              </dl>
+              <dl>
+                <dt><span class="value"><a href="/clients/"><code>/clients/</code></a></span></dt>
+                <dd class="ja" lang="ja">社名（五十音／英字）と業種の索引</dd>
+                <dd class="en" lang="en">Index by official name (kana / Latin alphabet) and industry</dd>
+              </dl>
+              <dl>
+                <dt><span class="value"><a href="/search/"><code>/search/</code></a></span></dt>
+                <dd class="ja" lang="ja">全文検索による横断参照</dd>
+                <dd class="en" lang="en">Full-text search across records</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4 id="middle-heading-endpoints"><span class="value">Endpoints</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value"><a href="/wp-sitemap.xml"><code>/wp-sitemap.xml</code></a></span></dt>
+                <dd class="ja" lang="ja">主要URL一覧（分割サイトマップ含む）</dd>
+                <dd class="en" lang="en">Primary sitemap index and split sitemaps</dd>
+              </dl>
+              <dl>
+                <dt><span class="value"><a href="/feed/"><code>/feed/</code></a></span></dt>
+                <dd class="ja" lang="ja">サイト全体の更新フィード（<abbr title="Really Simple Syndication">RSS</abbr>）</dd>
+                <dd class="en" lang="en">Site-wide update feed (<abbr title="Really Simple Syndication">RSS</abbr>)</dd>
+              </dl>
+              <dl>
+                <dt><span class="value"><a href="/robots.txt"><code>/robots.txt</code></a></span></dt>
+                <dd class="ja" lang="ja">クローラールール</dd>
+                <dd class="en" lang="en">Crawler directives</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Status endpoint</span></dt>
+                <dd class="ja" lang="ja">「<i>Diagnostics</i>」の要約と最終更新時刻</dd>
+                <dd class="en" lang="en"><i>Diagnostics</i> summary and last updated timestamp</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4 id="middle-heading-structured-data"><span class="value">Structured Data</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Format</span></dt>
+                <dd class="ja" lang="ja"><abbr title="JavaScript Object Notation for Linked Data">JSON-LD</abbr>（ページ単位で埋め込み）</dd>
+                <dd class="en" lang="en"><abbr title="JavaScript Object Notation for Linked Data">JSON-LD</abbr> embedded per page</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Types</span></dt>
+                <dd class="ja" lang="ja"><code>Organization</code>／<code>BreadcrumbList</code>／<code>CreativeWork</code></dd>
+                <dd class="en" lang="en"><code>Organization</code>, <code>BreadcrumbList</code>, <code>CreativeWork</code> (as applicable)</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Coverage</span></dt>
+                <dd class="ja" lang="ja">サイト全体・パンくず・各プロジェクト詳細</dd>
+                <dd class="en" lang="en">Site-wide, breadcrumbs, and project detail pages</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Languages</span></dt>
+                <dd class="ja" lang="ja">日本語・英語の併記</dd>
+                <dd class="en" lang="en">Japanese and English as the default pair</dd>
+              </dl>
+            </div>
+          </section>
+
+        </div>
+      </section>
+
+      <!-- content-notes -->
+      <section class="content notes major">
+        <header class="head">
+          <h3 class="index" id="major-heading-specification"><span class="value">Specification</span></h3>
+        </header>
+        <div class="body">
+          <div class="textpair">
+            <p class="ja" lang="ja">配信モデル、アセット構成、<abbr title="HyperText Markup Language">HTML</abbr>／<abbr title="Cascading Style Sheets">CSS</abbr>／<abbr title="JavaScript">JS</abbr>の実装方針、画像・フォントの扱い、アクセシビリティ/パフォーマンス目標、セキュリティ/プライバシー基準を定義。版管理情報と公開アセット（例：<code>nor.tokens.css</code>）は本節に集約し、可変値は <code>/build.json</code> に委譲。</p>
+            <p class="en" lang="en">Defines delivery model, asset layout, <abbr title="HyperText Markup Language">HTML</abbr> / <abbr title="Cascading Style Sheets">CSS</abbr> / <abbr title="JavaScript">JS</abbr> policies, image/font handling, accessibility/performance targets, and security/privacy baselines. Versioning and public assets (e.g., <code>nor.tokens.css</code>) are consolidated here; mutable values live in <code>/build.json</code>.</p>
+          </div>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Platform</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Core</span></dt>
+                <dd class="ja" lang="ja">WordPress <code>6.9</code>（シングルサイト構成）</dd>
+                <dd class="en" lang="en">WordPress <code>6.9</code> in a single-site setup</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Runtime</span></dt>
+                <dd class="ja" lang="ja"><abbr title="Hypertext Preprocessor">PHP</abbr> <code>8.3</code>／MySQL <code>8.0</code></dd>
+                <dd class="en" lang="en"><abbr title="Hypertext Preprocessor">PHP</abbr> <code>8.3</code> with MySQL <code>8.0</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Timezone</span></dt>
+                <dd class="ja" lang="ja"><code>Asia/Tokyo</code>（既定言語：日本語）</dd>
+                <dd class="en" lang="en"><code>Asia/Tokyo</code> with Japanese as the default language</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Hosting/Delivery</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Provider</span></dt>
+                <dd class="ja" lang="ja">さくらのレンタルサーバ スタンダード</dd>
+                <dd class="en" lang="en">Sakura Rental Server “Standard” plan</dd>
+              </dl>
+              <dl>
+                <dt><span class="value"><abbr title="Transport Layer Security">TLS</abbr></span></dt>
+                <dd class="ja" lang="ja">Let’s Encrypt（<abbr title="Domain Validation">DV</abbr>）による <abbr title="Transport Layer Security">TLS</abbr> 終端</dd>
+                <dd class="en" lang="en"><abbr title="Transport Layer Security">TLS</abbr> termination with Let’s Encrypt (<abbr title="Domain Validation">DV</abbr>)</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Protocols</span></dt>
+                <dd class="ja" lang="ja"><abbr title="Hypertext Transfer Protocol Secure">HTTPS</abbr>／<abbr title="Hypertext Transfer Protocol Version 2">HTTP/2</abbr> を基本プロトコルとして使用</dd>
+                <dd class="en" lang="en"><abbr title="Hypertext Transfer Protocol Secure">HTTPS</abbr> with <abbr title="Hypertext Transfer Protocol Version 2">HTTP/2</abbr> as the primary protocol</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Server</span></dt>
+                <dd class="ja" lang="ja">Apache</dd>
+                <dd class="en" lang="en">Apache</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Compression</span></dt>
+                <dd class="ja" lang="ja">Gzip などによるコンテンツ圧縮を利用</dd>
+                <dd class="en" lang="en">Uses content compression such as Gzip</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Logs</span></dt>
+                <dd class="ja" lang="ja">アクセスログ／エラーログをサーバー側で取得</dd>
+                <dd class="en" lang="en">Access and error logs collected on the server</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Theme & Structure</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Theme</span></dt>
+                <dd class="ja" lang="ja">WordPress 用フルスクラッチのカスタムテーマ「<code>nor</code>」（<i>Classic Theme</i>／テンプレート階層ベース）</dd>
+                <dd class="en" lang="en">Fully custom WordPress theme “<code>nor</code>” built as a <i>Classic Theme</i> using the template hierarchy</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Child Theme</span></dt>
+                <dd class="ja" lang="ja">個別調整・将来拡張用の <i>Child Theme</i>「<code>nor-child</code>」</dd>
+                <dd class="en" lang="en"><i>Child Theme</i> “<code>nor-child</code>” reserved for custom adjustments and future extensions</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Directories</span></dt>
+                <dd class="ja" lang="ja"><code>/assets/css</code>, <code>/assets/js</code>, <code>/assets/img</code>, <code>/assets/fonts</code> を静的アセット格納用ディレクトリとして使用</dd>
+                <dd class="en" lang="en"><code>/assets/css</code>, <code>/assets/js</code>, <code>/assets/img</code>, <code>/assets/fonts</code> used as directories for static assets</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Templates</span></dt>
+                <dd class="ja" lang="ja"><code>front-page.php</code>, <code>archive.php</code>, <code><var>taxonomy-*.php</var></code>, <code>single-project.php</code>, <code>page-about.php</code> などを WordPress 標準のテンプレート階層に沿って定義</dd>
+                <dd class="en" lang="en">Key templates such as <code>front-page.php</code>, <code>archive.php</code>, <code><var>taxonomy-*.php</var></code>, <code>single-project.php</code>, <code>page-about.php</code> defined following the standard WordPress template hierarchy</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Content Model</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Post Types</span></dt>
+                <dd class="ja" lang="ja"><code>project</code>（制作記録の詳細）と <code>page</code>（固定ページ）を使用</dd>
+                <dd class="en" lang="en">Uses <code>project</code> for work record details and <code>page</code> for static content</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Taxonomies</span></dt>
+                <dd class="ja" lang="ja"><code>category</code>／<code>post_tag</code> に加え、<code>clients</code>／<code>industries</code>／<code>doc_types</code>／<code>site_types</code>／<code>roles</code>／<code>tools</code> のカスタムタクソノミーを利用</dd>
+                <dd class="en" lang="en">Uses core taxonomies <code>category</code> and <code>post_tag</code> plus custom taxonomies <code>clients</code>, <code>industries</code>, <code>doc_types</code>, <code>site_types</code>, <code>roles</code>, and <code>tools</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Archive Logic</span></dt>
+                <dd class="ja" lang="ja">年別アーカイブは WordPress 標準の年別アーカイブ機能を利用</dd>
+                <dd class="en" lang="en">Yearly archives rely on the default yearly archive functionality in WordPress</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Routing & <abbr title="Uniform Resource Locator">URL</abbr>s</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Permalinks</span></dt>
+                <dd class="ja" lang="ja"><code>project</code> 投稿タイプは <code>/works/<var>%postname%</var>/</code> 形式のパーマリンクを使用</dd>
+                <dd class="en" lang="en"><code>project</code> post type uses <code>/works/<var>%postname%</var>/</code> as the permalink pattern</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Taxonomy Archives</span></dt>
+                <dd class="ja" lang="ja"><code>Categories</code> は <code>/categories/<var>{slug}</var>/</code>、<code>Tags</code> は <code>/tags/<var>{slug}</var>/</code> を使用、カスタムタクソノミーは <code>/clients/<var>{slug}</var>/</code> など <code>/<var>taxonomy</var>/<var>{slug}</var>/</code> 形式で統一</dd>
+                <dd class="en" lang="en">Category archives use <code>/categories/<var>{slug}</var>/</code> and tag archives use <code>/tags/<var>{slug}</var>/</code>, while custom taxonomies share the <code>/<var>taxonomy</var>/<var>{slug}</var>/</code> pattern (for example <code>/clients/<var>{slug}</var>/</code>)</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Trailing Slash</span></dt>
+                <dd class="ja" lang="ja">投稿・固定ページ・タクソノミーアーカイブは、いずれも末尾スラッシュありの <abbr title="Uniform Resource Locator">URL</abbr> に統一</dd>
+                <dd class="en" lang="en">Posts, pages, and taxonomy archives all use <abbr title="Uniform Resource Locator">URL</abbr>s with a trailing slash</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Feeds & Sitemaps</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Reference</span></dt>
+                <dd class="ja" lang="ja">フィード／サイトマップの詳細なエンドポイントは「<a href="#middle-heading-endpoints"><i>Structure / Endpoints</i></a>」を参照</dd>
+                <dd class="en" lang="en">Feed and sitemap endpoints are defined under “<a href="#middle-heading-endpoints"><i>Structure / Endpoints</i></a>”</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value"><abbr title="HyperText Markup Language">HTML</abbr> Semantics & Metadata</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Headings</span></dt>
+                <dd class="ja" lang="ja">各ページで <code>H1</code> は 1 つとし、<code>H2</code> – <code>H6</code> で文書構造を階層化</dd>
+                <dd class="en" lang="en">Uses a single <code>H1</code> per page, with <code>H2</code> – <code>H6</code> expressing the document hierarchy</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Meta</span></dt>
+                <dd class="ja" lang="ja"><code>canonical</code>／<abbr title="Open Graph Protocol"><code>OGP</code></abbr> / Twitter Card / <code>robots</code> / <code>hreflang</code> などのメタ情報をページ種別に応じて付与</dd>
+                <dd class="en" lang="en">Applies <code>canonical</code>, <abbr title="Open Graph Protocol"><code>OGP</code></abbr>/Twitter, <code>robots</code>, and <code>hreflang</code> meta tags as appropriate for each page type</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Structured Data</span></dt>
+                <dd class="ja" lang="ja"><abbr title="JavaScript Object Notation for Linked Data">JSON-LD</abbr> の型と適用範囲は「<a href="#middle-heading-structured-data"><i>Structure / Structured Data</i></a>」に準拠</dd>
+                <dd class="en" lang="en"><abbr title="JavaScript Object Notation for Linked Data">JSON-LD</abbr> types and coverage follow “<a href="#middle-heading-structured-data"><i>Structure / Structured Data</i></a>”</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">AMP</span></dt>
+                <dd class="ja" lang="ja"><abbr title="Accelerated Mobile Pages">AMP</abbr>／<code>AMPHTML</code> は採用せず、全ページを通常の <abbr title="HyperText Markup Language">HTML</abbr> ドキュメントとして配信</dd>
+                <dd class="en" lang="en"><abbr title="Accelerated Mobile Pages">AMP</abbr> / <code>AMPHTML</code> is not used; all pages are delivered as standard <abbr title="HyperText Markup Language">HTML</abbr> documents</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value"><abbr title="Cascading Style Sheets">CSS</abbr> Architecture</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Files</span></dt>
+                <dd class="ja" lang="ja"><code>nor.tokens.css</code>／<code>nor.base.css</code>／<code>nor.ui.css</code> の 3 ファイル構成</dd>
+                <dd class="en" lang="en">Uses three main stylesheets: <code>nor.tokens.css</code>, <code>nor.base.css</code>, and <code>nor.ui.css</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Variables</span></dt>
+                <dd class="ja" lang="ja">色・タイポグラフィ・スペーシング・角丸・線・フォーカスを <i>CSS カスタムプロパティ</i> で定義</dd>
+                <dd class="en" lang="en">Defines <i>CSS custom properties</i> for color, typography, spacing, radius, stroke, and focus</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Grid</span></dt>
+                <dd class="ja" lang="ja"><code>4px</code> グリッドを基準とした余白・サイズ設計</dd>
+                <dd class="en" lang="en">Spacing and sizing follow a <code>4px</code> grid</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Enqueue</span></dt>
+                <dd class="ja" lang="ja"><code>wp_enqueue_style()</code> で読み込み、<code>filemtime</code> またはビルド時ハッシュでバージョン付与</dd>
+                <dd class="en" lang="en">Stylesheets are enqueued via <code>wp_enqueue_style()</code> with versions based on <code>filemtime</code> or a build hash</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value"><abbr title="JavaScript">JS</abbr> Policy</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Approach</span></dt>
+                <dd class="ja" lang="ja"><i>プログレッシブエンハンスメント</i>を前提とし、<abbr title="JavaScript">JS</abbr> なしでも主要コンテンツにアクセス可能</dd>
+                <dd class="en" lang="en">Follows <i>progressive enhancement</i>; core content remains accessible without <abbr title="JavaScript">JS</abbr></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">File</span></dt>
+                <dd class="ja" lang="ja"><code>nor.js</code> にナビゲーション補助・検索 <abbr title="User Interface">UI</abbr>、フォーカス制御など最小限の挙動を集約</dd>
+                <dd class="en" lang="en">Uses a single script, <code>nor.js</code>, for minimal behaviors such as navigation helpers, search <abbr title="User Interface">UI</abbr>, and focus handling</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Dependencies</span></dt>
+                <dd class="ja" lang="ja">フレームワーク非依存の<i>プレーン <abbr title="JavaScript">JS</abbr></i> 実装とし、外部 <abbr title="JavaScript">JS</abbr> ライブラリは原則不使用</dd>
+                <dd class="en" lang="en">Implements behaviors in <i>plain <abbr title="JavaScript">JS</abbr></i> with no framework dependencies and no external <abbr title="JavaScript">JS</abbr> libraries by default</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Loading</span></dt>
+                <dd class="ja" lang="ja">必要に応じて <code>defer</code> などの非同期読み込みを用い、初期表示の遅延を抑制</dd>
+                <dd class="en" lang="en">Uses <code>defer</code>red or otherwise non-blocking loading where appropriate to avoid delaying initial render</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">PWA</span></dt>
+                <dd class="ja" lang="ja"><code>Web App Manifest</code> を用いた <abbr title="Progressive Web Apps">PWA</abbr> 配信は現時点で対象外</dd>
+                <dd class="en" lang="en"><abbr title="Progressive Web Apps">PWA</abbr> delivery using a <code>Web App Manifest</code> is not planned at this time</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Images & Media</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Formats</span></dt>
+                <dd class="ja" lang="ja">静的画像は <abbr title="AV1 Image File Format">AVIF</abbr>／<abbr title="Web Picture">WebP</abbr> を優先し、互換性確保のため <abbr title="Joint Photographic Experts Group">JPEG</abbr> をフォールバックとして併用</dd>
+                <dd class="en" lang="en">Prefers <abbr title="AV1 Image File Format">AVIF</abbr> and <abbr title="Web Picture">WebP</abbr> for static images, with <abbr title="Joint Photographic Experts Group">JPEG</abbr> fallbacks for compatibility</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Responsive</span></dt>
+                <dd class="ja" lang="ja"><code>img</code> 要素の <code>srcset</code>／<code>sizes</code> を用いてレスポンシブ画像を配信</dd>
+                <dd class="en" lang="en">Serves responsive images using <code>img</code> <code>srcset</code> and <code>sizes</code> attributes</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Sizes</span></dt>
+                <dd class="ja" lang="ja"><abbr title="Open Graph Protocol">OGP</abbr> 用 <code>1200×630</code>、サムネイル <code>480×360</code> など用途別のカスタムサイズを定義</dd>
+                <dd class="en" lang="en">Defines custom sizes such as <code>1200×630</code> for <abbr title="Open Graph Protocol">OGP</abbr> and <code>480×360</code> for thumbnails</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Lazyload</span></dt>
+                <dd class="ja" lang="ja"><i>fold</i> 下の画像には <code>loading="lazy"</code> を付与し、初期ロードの負荷を軽減</dd>
+                <dd class="en" lang="en">Applies <code>loading="lazy"</code> to <i>below-the-fold</i> images to reduce initial load</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Permissions</span></dt>
+                <dd class="ja" lang="ja">画像掲載の可否とポリシーは「<a href="/policies/#policies-heading-publication"><i>Policies（Publication Policy）</i></a>」に準拠</dd>
+                <dd class="en" lang="en">Image usage and visibility follow “<a href="/policies/#policies-heading-publication"><i>Policies (Publication Policy)</i></a>”</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">I18n</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Languages</span></dt>
+                <dd class="ja" lang="ja">日本語／英語の二言語運用を基本とし、追加言語は想定しない構成</dd>
+                <dd class="en" lang="en">Operates primarily in Japanese and English; additional languages are not planned</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Strings</span></dt>
+                <dd class="ja" lang="ja"><abbr title="Hypertext Preprocessor">PHP</abbr> テンプレート上の表示文字列は <code>__()</code>／<code>_e()</code> 等でラップし、翻訳可能な形で管理</dd>
+                <dd class="en" lang="en">Wraps display strings in functions such as <code>__()</code> and <code>_e()</code> to keep them translatable</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Lang attributes</span></dt>
+                <dd class="ja" lang="ja"><code>html</code> 要素および部分的な言語切り替え箇所に <code>lang</code> 属性を適切に付与</dd>
+                <dd class="en" lang="en">Sets <code>lang</code> attributes appropriately on the <code>html</code> element and inline language switches</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Canonical</span></dt>
+                <dd class="ja" lang="ja">文言の正本は日本語とし、優先関係は「<a href="/policies/#policies-heading-language"><i>Policies（Language Priority）</i></a>」に準拠</dd>
+                <dd class="en" lang="en">Treats Japanese text as canonical, with precedence aligned to “<a href="/policies/#policies-heading-language"><i>Policies (Language Priority)</i></a>”</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Content</span></dt>
+                <dd class="ja" lang="ja">ページ構造とテキスト変数は <code>JA</code>／<code>EN</code> ペアで管理し、一方のみの表示は例外扱い</dd>
+                <dd class="en" lang="en">Manages structure and text variables as <code>JA</code> / <code>EN</code> pairs; single-language displays are treated as exceptions</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Accessibility Baseline</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Standard</span></dt>
+                <dd class="ja" lang="ja">参照基準は WCAG 2.1 AA、「<a href="/policies/#policies-heading-accessibility"><i>Policies（Accessibility Statement）</i></a>」に準拠</dd>
+                <dd class="en" lang="en">Uses WCAG 2.1 AA as a reference and follows “<a href="/policies/#policies-heading-accessibility"><i>Policies (Accessibility Statement)</i></a>”</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Contrast</span></dt>
+                <dd class="ja" lang="ja">本文 <code>4.5:1</code> 以上/<abbr title="User Interface">UI</abbr> <code>3:1</code> 以上を目安とし、一部自己紹介ブロックは例外として別管理</dd>
+                <dd class="en" lang="en">Targets <code>4.5:1</code> for text and <code>3:1</code> for <abbr title="User Interface">UI</abbr>, with certain self-descriptive blocks treated as managed exceptions</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Keyboard & Focus</span></dt>
+                <dd class="ja" lang="ja">キーボード操作で主要コンテンツに到達可能とし、可視フォーカスを維持</dd>
+                <dd class="en" lang="en">Keeps primary content keyboard-accessible with a visible focus indicator</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Motion</span></dt>
+                <dd class="ja" lang="ja"><code>prefers-reduced-motion</code> を尊重し、アニメーションは最小限</dd>
+                <dd class="en" lang="en">Honors <code>prefers-reduced-motion</code> and keeps animations minimal</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Performance Budget</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Core Web Vitals</span></dt>
+                <dd class="ja" lang="ja"><abbr title="Largest Contentful Paint">LCP</abbr> ≤ <code>2.5s</code>／<abbr title="Cumulative Layout Shift">CLS</abbr> ≤ <code>0.10</code>／<abbr title="Interaction to Next Paint">INP</abbr> ≤ <code>200ms</code> を目安に主要テンプレートを計測</dd>
+                <dd class="en" lang="en">Targets <abbr title="Largest Contentful Paint">LCP</abbr> ≤ <code>2.5s</code>, <abbr title="Cumulative Layout Shift">CLS</abbr> ≤ <code>0.10</code>, and <abbr title="Interaction to Next Paint">INP</abbr> ≤ <code>200ms</code> on key templates</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Transfer size</span></dt>
+                <dd class="ja" lang="ja">初回表示の <abbr title="HyperText Markup Language">HTML</abbr>／<abbr title="Cascading Style Sheets">CSS</abbr>／<abbr title="JavaScript">JS</abbr>/画像合計は主要ページで数百 <code>KB</code> 程度を目安</dd>
+                <dd class="en" lang="en">Keeps first-view <abbr title="HyperText Markup Language">HTML</abbr>, <abbr title="Cascading Style Sheets">CSS</abbr>, <abbr title="JavaScript">JS</abbr>, and images on key pages within a few hundred <code>kilobytes</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Caching & Compression</span></dt>
+                <dd class="ja" lang="ja">静的アセットに <code>Cache-Control</code> を付与し、Gzip 圧縮で配信</dd>
+                <dd class="en" lang="en">Applies <code>Cache-Control</code> to static assets and serves text responses with Gzip compression</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Images</span></dt>
+                <dd class="ja" lang="ja">用途別サイズとフォーマット最適化で無駄な高解像度配信を抑制</dd>
+                <dd class="en" lang="en">Optimizes image sizes and formats per use case to avoid unnecessary high resolution</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Security & Privacy</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Headers</span></dt>
+                <dd class="ja" lang="ja"><code>HSTS</code>／<code>X-Content-Type-Options</code>／<code>Referrer-Policy</code>／<code>X-Frame-Options</code>／<code>Permissions-Policy</code> などを付与</dd>
+                <dd class="en" lang="en">Applies headers such as <code>HSTS</code>, <code>X-Content-Type-Options</code>, <code>Referrer-Policy</code>, <code>X-Frame-Options</code>, and <code>Permissions-Policy</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value"><abbr title="Content Security Policy">CSP</abbr></span></dt>
+                <dd class="ja" lang="ja"><code>Content-Security-Policy</code> は <code>report-only</code> から段階的に運用し、必要に応じて <code>enforce</code> へ移行</dd>
+                <dd class="en" lang="en">Runs <code>Content-Security-Policy</code> in <code>report-only</code> mode first and moves to <code>enforce</code> as needed</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Access & Updates</span></dt>
+                <dd class="ja" lang="ja"><code>XML-RPC</code> や管理画面は制限付きアクセスとし、WordPress コア/プラグインは自動更新と手動検証を併用</dd>
+                <dd class="en" lang="en">Restricts <code>XML-RPC</code> and admin endpoints and combines automatic minor updates with manually verified major updates for WordPress</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Logs & Cookies</span></dt>
+                <dd class="ja" lang="ja">サーバーログと <i>Cookie</i> の扱いは「<a href="/policies/#policies-heading-privacy"><i>Policies（Privacy）</i></a>」「<a href="/policies/#policies-heading-analytics-tracking"><i>Policies（Analytics & Tracking）</i></a>」に準拠し、取得は必要最小限</dd>
+                <dd class="en" lang="en">Handles server logs and <i>cookies</i> as defined in “<a href="/policies/#policies-heading-privacy"><i>Policies (Privacy)</i></a>” and “<a href="/policies/#policies-heading-analytics-tracking"><i>Policies (Analytics & Tracking)</i></a>”, limiting collection to what is necessary</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Error & Status</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Note</span></dt>
+                <dd class="ja" lang="ja">ステータス用エンドポイントは存在するが <abbr title="Uniform Resource Locator">URL</abbr> は非公開、概要は「<a href="#middle-heading-endpoints"><i>Structure（Endpoints）</i></a>」を参照</dd>
+                <dd class="en" lang="en">Status endpoint exists but its <abbr title="Uniform Resource Locator">URL</abbr> is not public; see “<a href="#middle-heading-endpoints"><i>Structure (Endpoints)</i></a>” for a summary</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Search</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Query</span></dt>
+                <dd class="ja" lang="ja">WordPress 標準の <code>?s=</code> パラメータによるキーワード検索のみをサポート</dd>
+                <dd class="en" lang="en">Supports keyword search using the standard WordPress <code>?s=</code> parameter</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Scope</span></dt>
+                <dd class="ja" lang="ja">公開状態の <code>project</code>／<code>page</code> を対象とし、下書き・非公開は検索対象外</dd>
+                <dd class="en" lang="en">Targets published <code>project</code> and <code>page</code> posts only; drafts and private entries are excluded</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Public Downloads</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value"><abbr title="Cascading Style Sheets">CSS</abbr></span></dt>
+                <dd class="ja" lang="ja"><a href="/assets/css/nor.tokens.css"><code>nor.tokens.css</code></a>/<a href="/assets/css/nor.base.css"><code>nor.base.css</code></a>/<a href="/assets/css/nor.ui.css"><code>nor.ui.css</code></a></dd>
+                <dd class="en" lang="en"><a href="/assets/css/nor.tokens.css"><code>nor.tokens.css</code></a>, <a href="/assets/css/nor.base.css"><code>nor.base.css</code></a>, <a href="/assets/css/nor.ui.css"><code>nor.ui.css</code></a></dd>
+              </dl>
+              <dl>
+                <dt><span class="value"><abbr title="JavaScript">JS</abbr></span></dt>
+                <dd class="ja" lang="ja"><a href="/assets/js/nor.js"><code>nor.js</code></a></dd>
+                <dd class="en" lang="en"><a href="/assets/js/nor.js"><code>nor.js</code></a></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Usage</span></dt>
+                <dd class="ja" lang="ja">再利用条件は「<a href="/policies/#policies-heading-licensing-reuse"><i>Policies（Content Licensing &amp; Reuse）</i></a>」の公開アセット（<abbr title="Cascading Style Sheets">CSS</abbr>／<abbr title="JavaScript">JS</abbr>）に準拠</dd>
+                <dd class="en" lang="en">Reuse conditions follow “<a href="/policies/#policies-heading-licensing-reuse"><i>Policies (Content Licensing &amp; Reuse)</i></a>” for public <abbr title="Cascading Style Sheets">CSS</abbr> / <abbr title="JavaScript">JS</abbr> assets</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Indexing</span></dt>
+                <dd class="ja" lang="ja">各アセットの直リンク <abbr title="Uniform Resource Locator">URL</abbr> は <code>noindex</code> を推奨</dd>
+                <dd class="en" lang="en">Direct asset <abbr title="Uniform Resource Locator">URL</abbr>s are recommended to be marked <code>noindex</code></dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Build & Versioning</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Version</span></dt>
+                <dd class="ja" lang="ja"><code>{<var>2025.12.05</var>}</code></dd>
+                <dd class="en" lang="en"><code>{<var>2025.12.05</var>}</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Build ID</span></dt>
+                <dd class="ja" lang="ja"><code>{<var>abc1234</var>}</code></dd>
+                <dd class="en" lang="en"><code>{<var>abc1234</var>}</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Built At</span></dt>
+                <dd class="ja" lang="ja"><code>{<var><time datetime="2025-12-05T14:32:00+09:00">2025-12-05 14:32</time></var> <abbr title="Japan Standard Time">JST</abbr>}</code>／<code>{<var><time datetime="2025-12-05T14:32:00+09:00">2025-12-05 05:32</time></var> <abbr title="Coordinated Universal Time">UTC</abbr>}</code></dd>
+                <dd class="en" lang="en"><code>{<var><time datetime="2025-12-05T14:32:00+09:00">2025-12-05 14:32</time></var> <abbr title="Japan Standard Time">JST</abbr>}</code>, <code>{<var><time datetime="2025-12-05T14:32:00+09:00">2025-12-05 05:32</time></var> <abbr title="Coordinated Universal Time">UTC</abbr>}</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Notes</span></dt>
+                <dd class="ja" lang="ja">履歴の詳細はリポジトリ側（Git log 等）で管理</dd>
+                <dd class="en" lang="en">Detailed history is managed in the repository (e.g., Git log)</dd>
+              </dl>
+            </div>
+          </section>
+
+        </div>
+      </section>
+
+      <!-- content-notes -->
+      <section class="content notes major">
+        <header class="head">
+          <h3 class="index" id="major-heading-design-system"><span class="value">Design System</span></h3>
+        </header>
+        <div class="body">
+          <div class="textpair">
+            <p class="ja" lang="ja">Figma で管理する<i>トークン駆動</i>の設計体系。色・タイポグラフィ・スペーシング・角丸・線・フォーカスなどをトークンとして定義し、<i>コンポーネント</i>/<i>テンプレート</i>へ伝播させることで一貫性と再利用性を確保。アクセシビリティ要件は可能な範囲でトークン層に集約。</p>
+            <p class="en" lang="en">A <i>token-driven</i> design system maintained in Figma. Tokens for color, typography, spacing, radius, stroke, and focus drive <i>components</i> and <i>templates</i> to ensure consistency and reuse. Accessibility requirements are consolidated at the token layer wherever possible.</p>
+          </div>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Tokens</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Colors</span></dt>
+                <dd class="ja" lang="ja"><code>base</code>／<code>tone</code>／<code>mode</code>／<code>doc</code> の 4 系統で色トークンを管理</dd>
+                <dd class="en" lang="en">Color tokens grouped into <code>base</code>, <code>tone</code>, <code>mode</code>, and <code>doc</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Text variables</span></dt>
+                <dd class="ja" lang="ja"><code>site</code>／<code>org</code>／<code>sns</code>／<code>meta</code>／<code>page</code> の 5 系統でサイト共通テキスト変数を管理</dd>
+                <dd class="en" lang="en">Site-wide text variables grouped into <code>site</code>, <code>org</code>, <code>sns</code>, <code>meta</code>, and <code>page</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Numeric</span></dt>
+                <dd class="ja" lang="ja"><code>spacing</code>／<code>opacity</code>／<code>radius</code>／<code>border</code>／<code>motion</code>／<code>layer</code> の数値トークンを定義</dd>
+                <dd class="en" lang="en">Numeric tokens defined for <code>spacing</code>, <code>opacity</code>, <code>radius</code>, <code>border</code>, <code>motion</code>, and <code>layer</code></dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Typography</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Font families</span></dt>
+                <dd class="ja" lang="ja">Noto Sans JP／Inter／Yaku Han JP を組み合わせて日本語・英語・約物の見え方を統一</dd>
+                <dd class="en" lang="en">Combines Noto Sans JP, Inter, and Yaku Han JP to keep Japanese, English, and punctuation visually consistent</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Font Size & Letter Spacing</span></dt>
+                <dd class="ja" lang="ja">主要なフォントサイズごとに字送りをセットで定義し、見出しと本文の密度を制御</dd>
+                <dd class="en" lang="en">Defines letter spacing together with key font sizes to control visual density for headings and body</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Line Height</span></dt>
+                <dd class="ja" lang="ja">用途に応じて複数段階の <code>line-height</code> を用意し、本文・見出し・注記で使い分け</dd>
+                <dd class="en" lang="en">Provides several <code>line-height</code> levels tuned for body text, headings, and auxiliary notes</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Japanese Font Mixer</span></dt>
+                <dd class="ja" lang="ja">「Japanese Font Mixer」で <code>nør.300</code>／<code>400</code>／<code>500</code>／<code>700</code> のプリセットを用意し、和文・欧文・約物の組み合わせを固定</dd>
+                <dd class="en" lang="en">Uses Japanese Font Mixer presets (<code>nør.300</code> / <code>400</code> / <code>500</code> / <code>700</code>) to lock combinations of Japanese, Latin, and punctuation</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Scales</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Spacing</span></dt>
+                <dd class="ja" lang="ja"><code>4px</code> ベースのスペーシングスケールを定義し、コンポーネント間・セクション間の余白を統一</dd>
+                <dd class="en" lang="en">Defines a <code>4px</code>-based spacing scale to standardize gaps between components and sections</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Radius</span></dt>
+                <dd class="ja" lang="ja">小要素からカード・モーダルまで共通の角丸スケールで運用</dd>
+                <dd class="en" lang="en">Uses a shared radius scale from small <abbr title="User Interface">UI</abbr> parts to cards and modals</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Stroke</span></dt>
+                <dd class="ja" lang="ja">枠線の太さを数段階に限定し、強調や区切りの表現を揃える</dd>
+                <dd class="en" lang="en">Limits border widths to a few steps to keep emphasis and separators consistent</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Opacity</span></dt>
+                <dd class="ja" lang="ja"><code>overlay</code>／<code>hover</code>／<code>disabled</code> などの状態ごとに不透明度トークンを定義</dd>
+                <dd class="en" lang="en">Defines opacity tokens for states such as <code>overlay</code>, <code>hover</code>, and <code>disabled</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Motion</span></dt>
+                <dd class="ja" lang="ja">短いホバーからローディングまでをカバーする時間スケールを定義</dd>
+                <dd class="en" lang="en">Defines duration tokens covering everything from quick hovers to loading sequences</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Easing</span></dt>
+                <dd class="ja" lang="ja"><code>standard</code>／<code>decel</code>／<code>accel</code> の cubic-bezier プリセットを使用</dd>
+                <dd class="en" lang="en">Uses <code>standard</code>, <code>decel</code>, and <code>accel</code> cubic-bezier presets</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Reduced motion</span></dt>
+                <dd class="ja" lang="ja"><code>prefers-reduced-motion</code> を尊重し、アニメーション量を抑えた挙動を採用</dd>
+                <dd class="en" lang="en">Respects <code>prefers-reduced-motion</code> and reduces animation when it is enabled</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">States</span></dt>
+                <dd class="ja" lang="ja"><code>default</code>／<code>hover</code>／<code>active</code>／<code>focus</code>／<code>disabled</code> の 5 状態を共通前提として設計</dd>
+                <dd class="en" lang="en"><code>default</code>, <code>hover</code>, <code>active</code>, <code>focus</code>, and <code>disabled</code> are the shared <abbr title="User Interface">UI</abbr> states</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Layer</span></dt>
+                <dd class="ja" lang="ja">ベース／オーバーレイ／トースト／ローディングなどのレイヤー順序を <code>layer</code> トークンで固定</dd>
+                <dd class="en" lang="en">Uses <code>layer</code> tokens to fix stacking order for base content, overlays, toasts, and loading <abbr title="User Interface">UI</abbr></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Shadows</span></dt>
+                <dd class="ja" lang="ja">カードやモーダル向けに段階シャドウスタイルを用意し、浮き具合を統一</dd>
+                <dd class="en" lang="en">Defines stepped shadow styles for cards and modals to keep elevation consistent</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Typography</span></dt>
+                <dd class="ja" lang="ja">見出し・本文・補助テキスト向けのタイポグラフィスタイルをスケールとして管理</dd>
+                <dd class="en" lang="en">Manages typography styles as a scale for headings, body text, and auxiliary copy</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Breakpoints</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Desktop</span></dt>
+                <dd class="ja" lang="ja">広いビューでの標準レイアウト用ブレイクポイント</dd>
+                <dd class="en" lang="en">Primary layout breakpoint for wide viewports</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Tablet</span></dt>
+                <dd class="ja" lang="ja"><code>2</code><i>カラム</i>前提の中間レイアウト用ブレイクポイント</dd>
+                <dd class="en" lang="en">Intermediate breakpoint optimized for <code>2</code>-<i>column layouts</i></dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Grid</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Desktop grid</span></dt>
+                <dd class="ja" lang="ja"><code>12</code><i>カラムグリッド</i>を基準に、本文幅とサイド要素の配置を設計</dd>
+                <dd class="en" lang="en">Uses a <code>12</code>-<i>column grid</i> as the basis for body content and side elements</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Tablet grid</span></dt>
+                <dd class="ja" lang="ja">中程度の画面幅に合わせたグリッドで、<code>2</code><i>カラム</i>構成を前提に設計</dd>
+                <dd class="en" lang="en">Grid tuned for medium-width screens assuming <code>2</code>-<i>column layouts</i></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Mobile grid</span></dt>
+                <dd class="ja" lang="ja"><code>1</code><i>カラム</i>前提のグリッドで、読みやすさと余白感を優先</dd>
+                <dd class="en" lang="en"><i>Single-column</i> oriented grid prioritizing readability and comfortable spacing</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Motion</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Durations</span></dt>
+                <dd class="ja" lang="ja">短いホバーからページ遷移・ローディングまでを <code>motion</code> トークンで共通化</dd>
+                <dd class="en" lang="en"><code>motion</code> tokens cover short hovers, page transitions, and loading sequences</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Easing</span></dt>
+                <dd class="ja" lang="ja"><code>standard</code>／<code>decel</code>／<code>accel</code> の <code>cubic-bezier</code> プリセットを使用</dd>
+                <dd class="en" lang="en">Uses <code>standard</code>, <code>decel</code>, and <code>accel</code> <code>cubic-bezier</code> presets</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Reduced motion</span></dt>
+                <dd class="ja" lang="ja"><code>prefers-reduced-motion</code> を尊重し、アニメーション量を抑えた挙動を採用</dd>
+                <dd class="en" lang="en">Respects <code>prefers-reduced-motion</code> and reduces animation when it is enabled</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">States & Interaction</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">States</span></dt>
+                <dd class="ja" lang="ja"><code>default</code>／<code>hover</code>／<code>active</code>／<code>focus</code>／<code>disabled</code> の 5 状態を共通前提として設計</dd>
+                <dd class="en" lang="en"><code>default</code>, <code>hover</code>, <code>active</code>, <code>focus</code>, and <code>disabled</code> are the shared <abbr title="User Interface">UI</abbr> states</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Focus</span></dt>
+                <dd class="ja" lang="ja">フォーカス時は要素外側に <code>1px</code> の線と <i>focus</i> 用 <i>shadow</i> スタイルを適用</dd>
+                <dd class="en" lang="en">Focused elements get a <code>1px</code> outline plus a dedicated <i>focus shadow</i> outside the element</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Keyboard interaction</span></dt>
+                <dd class="ja" lang="ja">キーボード操作で到達可能な要素には必ずフォーカススタイルを表示</dd>
+                <dd class="en" lang="en">All keyboard-focusable elements show a visible focus style</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Disabled</span></dt>
+                <dd class="ja" lang="ja"><code>disabled</code> 状態はコントラストと不透明度を下げた見た目で表現</dd>
+                <dd class="en" lang="en"><code>disabled</code> state appears with reduced contrast and opacity</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Content Style</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Language</span></dt>
+                <dd class="ja" lang="ja">日本語／英語の二言語併記。矛盾がある場合は日本語版を正本とみなす</dd>
+                <dd class="en" lang="en">Japanese and English shown in parallel; where they differ, Japanese is canonical</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Voice</span></dt>
+                <dd class="ja" lang="ja">自分用メモ・構造説明は常体。ユーザー向け <abbr title="User Interface">UI</abbr> 文言・ガイドはですます調</dd>
+                <dd class="en" lang="en">Neutral descriptive tone for internal notes; polite user-facing tone in <abbr title="User Interface">UI</abbr> and guides</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Names & dates</span></dt>
+                <dd class="ja" lang="ja">固有名詞は公式表記。日付は <code>YYYY-MM-DD</code>、時刻は <i>24 時間表記</i></dd>
+                <dd class="en" lang="en">Proper names use official spellings; dates use <code>YYYY-MM-DD</code> and times use the <i>24-hour clock</i></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Links</span></dt>
+                <dd class="ja" lang="ja">本文リンクは下線なし。ホバー時のみコントラスト変化</dd>
+                <dd class="en" lang="en">Body links have no underline; hover state changes contrast only</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Quotes</span></dt>
+                <dd class="ja" lang="ja">ページ名・<abbr title="User Interface">UI</abbr> ラベル・ボタン文言は「」で表記</dd>
+                <dd class="en" lang="en">Page names, <abbr title="User Interface">UI</abbr> labels, and button copy use quotation marks (“…”)</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Iconography</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Icon set</span></dt>
+                <dd class="ja" lang="ja"><abbr title="User Interface">UI</abbr> 全体で共通利用するアイコンセットを 1 か所に集約</dd>
+                <dd class="en" lang="en">Shared <abbr title="User Interface">UI</abbr> icons are collected in a single set</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Container</span></dt>
+                <dd class="ja" lang="ja">実画面のアイコンは <code>icon-container</code> 経由で配置</dd>
+                <dd class="en" lang="en">Runtime icons are placed via an <code>icon-container</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Color & style</span></dt>
+                <dd class="ja" lang="ja">塗り・線の色は Color Scheme の <code>tone/</code> および <code>mode/</code> を参照</dd>
+                <dd class="en" lang="en">Fill and stroke colors reference Color Scheme <code>tone/</code> and <code>mode/</code> tokens</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Stroke & radius</span></dt>
+                <dd class="ja" lang="ja">線幅・角丸は <i>Foundations</i> の <i>Border</i>/<i>Radius</i> スケールに揃える</dd>
+                <dd class="en" lang="en">Stroke width and corner radius follow the <i>Foundations Border</i> and <i>Radius</i> scales</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Usage</span></dt>
+                <dd class="ja" lang="ja">現行サイトでのアイコン使用は最小限。必要な画面から段階的に追加</dd>
+                <dd class="en" lang="en">Icon use is minimal in the current site and added gradually as needed</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Components</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Navigations</span></dt>
+                <dd class="ja" lang="ja"><code>buttons</code>／<code>icon-buttons</code>／<code>links</code>／<code>breadcrumbs</code>／<code>nav</code>／<code>paginations</code> でナビゲーション周りを構成</dd>
+                <dd class="en" lang="en">Navigation layer composed of <code>buttons</code>, <code>icon-buttons</code>, <code>links</code>, <code>breadcrumbs</code>, <code>nav</code>, and <code>paginations</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Forms</span></dt>
+                <dd class="ja" lang="ja"><code>field-label</code>／<code>field-message</code>／<code>input</code>／<code>textarea</code>／<code>select</code>／<code>checkbox</code>／<code>radio</code>／<code>search</code>／<code>announcement</code> を共通ルールで管理</dd>
+                <dd class="en" lang="en"><code>field-label</code>, <code>field-message</code>, <code>input</code>, <code>textarea</code>, <code>select</code>, <code>checkbox</code>, <code>radio</code>, <code>search</code>, and <code>announcement</code> share a common form model</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Header & hero</span></dt>
+                <dd class="ja" lang="ja"><code>header</code>／<code>cookie-banner</code>／<code>hero</code>／<code>pair-hero</code>／<code>page-title</code> でページ上部の共通レイアウトを構成</dd>
+                <dd class="en" lang="en"><code>header</code>, <code>cookie-banner</code>, <code>hero</code>, <code>pair-hero</code>, and <code>page-title</code> build the shared top-of-page layout</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Footer & indices</span></dt>
+                <dd class="ja" lang="ja"><code>indices</code>／<code>footer</code>／<code>copyright</code> でフッターとインデックス周りを統合</dd>
+                <dd class="en" lang="en"><code>indices</code>, <code>footer</code>, and <code>copyright</code> integrate footer navigation and index access</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">List Cards</span></dt>
+                <dd class="ja" lang="ja"><code>card-works</code>／<code>card-empty</code>／<code>card-taxonomy</code>／<code>card-archive</code>／<code>card-client</code>／<code>chip</code>／<code>pair-list-cards</code> を一覧系コンポーネントとして使用</dd>
+                <dd class="en" lang="en"><code>card-works</code>, <code>card-empty</code>, <code>card-taxonomy</code>, <code>card-archive</code>, <code>card-client</code>, <code>chip</code>, and <code>pair-list-cards</code> are used for listing views</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Article Cards</span></dt>
+                <dd class="ja" lang="ja"><code>card-article</code>／<code>card-related</code> で記事詳細と関連記事ブロックを構成</dd>
+                <dd class="en" lang="en"><code>card-article</code> and <code>card-related</code> structure project detail content and related items</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Page items</span></dt>
+                <dd class="ja" lang="ja"><code>pages-head</code>／<code>pages-excerpt</code>／<code>pages-title</code>／<code>policies-article</code>／<code>notes-title</code>／<code>notes-row</code>／<code>see-also</code> をページ固有パーツとして共通利用</dd>
+                <dd class="en" lang="en"><code>pages-head</code>, <code>pages-excerpt</code>, <code>pages-title</code>, <code>policies-article</code>, <code>notes-title</code>, <code>notes-row</code>, and <code>see-also</code> are shared page-specific components</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Templates</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Page templates</span></dt>
+                <dd class="ja" lang="ja">Home／一覧／詳細／静的ページ／エラー／システムページごとにレイアウトテンプレートを定義</dd>
+                <dd class="en" lang="en">Defines layout templates for home, listing, detail, static, error, and system pages</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Alignment with build</span></dt>
+                <dd class="ja" lang="ja">Figma の <i>Design</i> ページと WordPress テーマのテンプレート階層を対応させて設計</dd>
+                <dd class="en" lang="en">Aligns Figma <i>Design</i> pages with the WordPress template hierarchy</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Project detail</span></dt>
+                <dd class="ja" lang="ja">本文・図版・メタ情報・関連リンクを <code>1</code> 単位として構造化したプロジェクト詳細テンプレートを使用</dd>
+                <dd class="en" lang="en">Uses a project detail template that structures body, figures, metadata, and related links as a single unit</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Figma</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Pages</span></dt>
+                <dd class="ja" lang="ja"><i>Thumbnail</i>/<i>Information</i>/<i>Foundations</i>/<i>Components</i>/<i>Design</i>/<i>Archive</i> の <i>6</i> ページ構成</dd>
+                <dd class="en" lang="en">Organized into <i>six</i> pages: <i>Thumbnail</i>, <i>Information</i>, <i>Foundations</i>, <i>Components</i>, <i>Design</i>, and <i>Archive</i></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Variables</span></dt>
+                <dd class="ja" lang="ja">色・タイポグラフィ・スペース・角丸・線・フォーカスを変数コレクションとして一元管理</dd>
+                <dd class="en" lang="en">Manages color, typography, spacing, radius, stroke, and focus as variable collections</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Naming</span></dt>
+                <dd class="ja" lang="ja"><code>base/</code>・<code>tone/</code>・<code>mode/</code> などの接頭辞と階層（例：<code>mode/light/*</code>）で命名を統一</dd>
+                <dd class="en" lang="en">Unifies naming with prefixes and tiers such as <code>base/</code>, <code>tone/</code>, and <code>mode/light/*</code></dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Public Downloads</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Tokens</span></dt>
+                <dd class="ja" lang="ja"><a href="/open-data/tokens.json"><code>/open-data/tokens.json</code></a></dd>
+                <dd class="en" lang="en"><a href="/open-data/tokens.json"><code>/open-data/tokens.json</code></a></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Components</span></dt>
+                <dd class="ja" lang="ja"><a href="/open-data/components.md"><code>/open-data/components.md</code></a></dd>
+                <dd class="en" lang="en"><a href="/open-data/components.md"><code>/open-data/components.md</code></a></dd>
+              </dl>
+            </div>
+          </section>
+
+        </div>
+      </section>
+
+      <!-- content-notes -->
+      <section class="content notes major">
+        <header class="head">
+          <h3 class="index" id="major-heading-diagnostics"><span class="value">Diagnostics</span></h3>
+        </header>
+        <div class="body">
+          <div class="textpair">
+            <p class="ja" lang="ja">主要テンプレートの稼働状況と品質指標をまとめたスナップショット。計測日と条件は随時更新。</p>
+            <p class="en" lang="en">Snapshot of key template health and quality metrics. Audit dates and conditions are updated as needed.</p>
+          </div>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Overview</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Scope</span></dt>
+                <dd class="ja" lang="ja">主要テンプレート全体の稼働状況スナップショット</dd>
+                <dd class="en" lang="en">Site-wide status snapshot across key templates</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Audit conditions</span></dt>
+                <dd class="ja" lang="ja">計測テンプレート・デバイス・ツール設定などの条件 <code>{<var>N/A</var>}</code></dd>
+                <dd class="en" lang="en">Measurement conditions such as templates, devices, and tool settings <code>{<var>N/A</var>}</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Templates</span></dt>
+                <dd class="ja" lang="ja">計測対象テンプレート <code>{<var>N/A</var>}</code></dd>
+                <dd class="en" lang="en">Templates covered in the audit <code>{<var>N/A</var>}</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Last audited</span></dt>
+                <dd class="ja" lang="ja">直近の計測日 <code>{<var>YYYY-MM-DD</var> <abbr title="Japan Standard Time">JST</abbr>}</code></dd>
+                <dd class="en" lang="en">Most recent audit date <code>{<var>YYYY-MM-DD</var> <abbr title="Japan Standard Time">JST</abbr>}</code></dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Accessibility</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Audit tools</span></dt>
+                <dd class="ja" lang="ja">axe-core／Lighthouse／WAVE などの自動評価ツールを併用</dd>
+                <dd class="en" lang="en">Combines automated tools such as axe-core, Lighthouse, and WAVE</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Contrast</span></dt>
+                <dd class="ja" lang="ja"><code>{<var>N/A</var>}</code></dd>
+                <dd class="en" lang="en"><code>{<var>N/A</var>}</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Keyboard & Focus</span></dt>
+                <dd class="ja" lang="ja"><code>{<var>N/A</var>}</code></dd>
+                <dd class="en" lang="en"><code>{<var>N/A</var>}</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value"><abbr title="Accessible Rich Internet Applications">ARIA</abbr> & Labels</span></dt>
+                <dd class="ja" lang="ja">クリティカル <code>{<var>N/A</var>}</code>／警告 <code>{<var>N/A</var>}</code></dd>
+                <dd class="en" lang="en">Critical <code>{<var>N/A</var>}</code> / Warnings <code>{<var>N/A</var>}</code></dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Performance</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Core Web Vitals</span></dt>
+                <dd class="ja" lang="ja"><code>{<var>N/A</var>}</code></dd>
+                <dd class="en" lang="en"><code>{<var>N/A</var>}</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Lighthouse score</span></dt>
+                <dd class="ja" lang="ja"><code>{<var>N/A</var>}</code></dd>
+                <dd class="en" lang="en"><code>{<var>N/A</var>}</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Transfer size</span></dt>
+                <dd class="ja" lang="ja"><code>{<var>N/A</var>}</code></dd>
+                <dd class="en" lang="en"><code>{<var>N/A</var>}</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Caching & Compression</span></dt>
+                <dd class="ja" lang="ja"><code>Cache-Control</code> 設定と Gzip 圧縮の有無を記録</dd>
+                <dd class="en" lang="en">Records <code>Cache-Control</code> configuration and use of Gzip compression</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Incidents</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Notes</span></dt>
+                <dd class="ja" lang="ja">直近の障害や気になる挙動 <code>{<var>N/A</var>}</code></dd>
+                <dd class="en" lang="en">Recent incidents or noteworthy behavior <code>{<var>N/A</var>}</code></dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value"><abbr title="Search Engine Optimization">SEO</abbr></span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Indexability</span></dt>
+                <dd class="ja" lang="ja"><code>robots</code>／<code>sitemap</code>／<code>canonical</code> 設定の状態を記録</dd>
+                <dd class="en" lang="en">Records the state of <code>robots</code> rules, <code>sitemap</code> submission, and <code>canonical</code> tags</dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Structured data</span></dt>
+                <dd class="ja" lang="ja">Errors <code>{<var>N/A</var>}</code>／Warnings <code>{<var>N/A</var>}</code></dd>
+                <dd class="en" lang="en">Errors <code>{<var>N/A</var>}</code> / Warnings <code>{<var>N/A</var>}</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Lighthouse score</span></dt>
+                <dd class="ja" lang="ja"><code>{<var>N/A</var>}</code></dd>
+                <dd class="en" lang="en"><code>{<var>N/A</var>}</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Links</span></dt>
+                <dd class="ja" lang="ja"><code>{<var>N/A</var>}</code></dd>
+                <dd class="en" lang="en"><code>{<var>N/A</var>}</code></dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Security Headers</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Headers</span></dt>
+                <dd class="ja" lang="ja"><code>HSTS</code>／<code>X-Content-Type-Options</code>／<code>X-Frame-Options</code>／<code>Referrer-Policy</code>／<code>Permissions-Policy</code> の適用状況を記録</dd>
+                <dd class="en" lang="en">Records application status for <code>HSTS</code>, <code>X-Content-Type-Options</code>, <code>X-Frame-Options</code>, <code>Referrer-Policy</code>, and <code>Permissions-Policy</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value"><abbr title="Content Security Policy">CSP</abbr></span></dt>
+                <dd class="ja" lang="ja">運用状態と Report <abbr title="Uniform Resource Identifier">URI</abbr> <code>{<var>N/A</var>}</code></dd>
+                <dd class="en" lang="en">Operational state and report <abbr title="Uniform Resource Identifier">URI</abbr> <code>{<var>N/A</var>}</code></dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Error Budget</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Rates</span></dt>
+                <dd class="ja" lang="ja"><code>{<var>N/A</var>}</code></dd>
+                <dd class="en" lang="en"><code>{<var>N/A</var>}</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Trends</span></dt>
+                <dd class="ja" lang="ja"><code>{<var>N/A</var>}</code></dd>
+                <dd class="en" lang="en"><code>{<var>N/A</var>}</code></dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Build Info</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Version</span></dt>
+                <dd class="ja" lang="ja"><code>{<var>YYYY.MM.DD</var>}</code></dd>
+                <dd class="en" lang="en"><code>{<var>YYYY.MM.DD</var>}</code></dd>
+              </dl>
+              <dl>
+                <dt><span class="value">Build ID</span></dt>
+                <dd class="ja" lang="ja"><code>{<var>abc1234</var>}</code></dd>
+                <dd class="en" lang="en"><code>{<var>abc1234</var>}</code></dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Meta</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Status endpoint</span></dt>
+                <dd class="ja" lang="ja">「<a href="#major-heading-diagnostics"><i>Diagnostics</i></a>」の要約を返す内部エンドポイント。<abbr title="Uniform Resource Locator">URL</abbr> は非公開</dd>
+                <dd class="en" lang="en">Internal endpoint returning the “<a href="#major-heading-diagnostics"><i>Diagnostics</i></a>” summary. <abbr title="Uniform Resource Locator">URL</abbr> is not exposed publicly</dd>
+              </dl>
+            </div>
+          </section>
+
+        </div>
+      </section>
+
+      <!-- content-notes -->
+      <section class="content notes major">
+        <header class="head">
+          <h3 class="index" id="major-heading-attributions"><span class="value">Attributions</span></h3>
+        </header>
+        <div class="body">
+          <div class="textpair">
+            <p class="ja" lang="ja">技術的な帰属と第三者ライセンスの要点を整理。</p>
+            <p class="en" lang="en">Summarizes key technical attributions and third-party licenses.</p>
+          </div>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Fonts</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Notes</span></dt>
+                <dd class="ja" lang="ja">Noto Sans JP／Inter／Yaku Han JP（いずれも <abbr title="SIL Open Font License 1.1">SIL OFL 1.1</abbr>）</dd>
+                <dd class="en" lang="en">Noto Sans JP, Inter, and Yaku Han JP (all under the <abbr title="SIL Open Font License 1.1">SIL OFL 1.1</abbr>).</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Iconography</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Notes</span></dt>
+                <dd class="ja" lang="ja">Font Awesome Free（Icons: <abbr title="Creative Commons Attribution 4.0 International">CC BY 4.0</abbr>/Fonts: <abbr title="SIL Open Font License 1.1">SIL OFL 1.1</abbr>/Code: MIT）、「Font Awesome」は Fonticons, Inc. の商標</dd>
+                <dd class="en" lang="en">Font Awesome Free (Icons: <abbr title="Creative Commons Attribution 4.0 International">CC BY 4.0</abbr> / Fonts: <abbr title="SIL Open Font License 1.1">SIL OFL 1.1</abbr> / Code: MIT); “Font Awesome” is a trademark of Fonticons, Inc.</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value"><abbr title="Content Management System">CMS</abbr></span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Notes</span></dt>
+                <dd class="ja" lang="ja"><abbr title="Content Management System">CMS</abbr> として WordPress を使用（<abbr title="GNU’s Not Unix">GNU</abbr> General Public License v2 以降に準拠）</dd>
+                <dd class="en" lang="en">Uses WordPress as the <abbr title="Content Management System">CMS</abbr> (licensed under the <abbr title="GNU’s Not Unix">GNU</abbr> General Public License v2 or later).</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Libraries</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Notes</span></dt>
+                <dd class="ja" lang="ja">現時点で外部 <abbr title="JavaScript">JS</abbr>／<abbr title="Cascading Style Sheets">CSS</abbr> ライブラリは不使用</dd>
+                <dd class="en" lang="en">No external <abbr title="JavaScript">JS</abbr> / <abbr title="Cascading Style Sheets">CSS</abbr> libraries in use at this time.</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Images & Media</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Notes</span></dt>
+                <dd class="ja" lang="ja">本番サイトの画像はプロジェクト固有素材のみ。レイアウト検討用のモックには Adobe Stock などのストック画像を使用する場合あり</dd>
+                <dd class="en" lang="en">Production site images use project-specific assets only. Layout mockups may use Adobe Stock or similar stock imagery.</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Third-party Services</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Notes</span></dt>
+                <dd class="ja" lang="ja">外部サービス／外部 <abbr title="Application Programming Interface">API</abbr> は現時点で不使用</dd>
+                <dd class="en" lang="en">No third-party services or <abbr title="Application Programming Interface">API</abbr>s in use.</dd>
+              </dl>
+            </div>
+          </section>
+
+          <!-- middle -->
+          <section class="middle">
+            <header class="title">
+              <h4><span class="value">Public assets</span></h4>
+            </header>
+            <div class="minor">
+              <dl>
+                <dt><span class="value">Notes</span></dt>
+                <dd class="ja" lang="ja"><code>nor.tokens.css</code>／<code>nor.base.css</code>／<code>nor.ui.css</code>／<code>nor.js</code> などの公開アセット。詳細な再利用条件は <a href="/policies/"><i>Policies</i></a>（<a href="/policies/#policies-heading-licensing-reuse"><i>Content Licensing &amp; Reuse</i></a>）を参照</dd>
+                <dd class="en" lang="en">Public assets such as <code>nor.tokens.css</code>, <code>nor.base.css</code>, <code>nor.ui.css</code>, and <code>nor.js</code>. For reuse conditions, see <a href="/policies/"><i>Policies</i></a> (<a href="/policies/#policies-heading-licensing-reuse"><i>Content Licensing &amp; Reuse</i></a>).</dd>
+              </dl>
+            </div>
+          </section>
+
+        </div>
+      </section>
+
+      <!-- see-also -->
+      <section class="see-also">
+        <header class="head">
+          <h3 class="en" lang="en">See Also</h3>
+          <p class="ja" lang="ja">補足</p>
+        </header>
+        <div class="body">
+          <ul>
+            <li class="ja" lang="ja">ライセンス・クレジット・掲載ポリシーなどは「<a href="/policies/"><i>Policies</i></a>」で御確認ください。</li>
+            <li class="en" lang="en">“<a href="/policies/"><i>Policies</i></a>” — licenses, credits, and publication policy.</li>
+          </ul>
+          <ul>
+            <li class="ja" lang="ja">お問い合わせ・削除依頼は「<a href="/contact/"><i>Contact</i></a>」から御連絡ください。</li>
+            <li class="en" lang="en">“<a href="/contact/"><i>Contact</i></a>” — inquiries and takedown requests.</li>
+          </ul>
+        </div>
+      </section>
+
+    </div>
+  </section>
+
+  <!-- indices -->
+  <section class="indices">
+    <div class="inner">
+      <header class="head">
+        <h2><span>Categories, Tags</span><br><span>&amp; Disciplines</span></h2>
+      </header>
+      <div class="body">
+        <div class="textpair">
+          <p class="ja" lang="ja">カテゴリー・タグ・年・クライアント別のインデックス。公開の有無にかかわらず、制作記録は<strong>全て保存</strong>。</p>
+          <p class="en" lang="en">Indexes by category, tag, year, and client. Every project kept on record — <strong>public or not</strong>.</p>
+        </div>
+        <div class="indices-nav">
+          <nav class="categories">
+            <header class="title">
+              <h3>Categories</h3>
+              <p>Browse works by discipline <br>and format.</p>
+            </header>
+            <div class="detail">
+              <ul>
+                <li><a href="/">Brand identity</a></li>
+                <li><a href="/">Graphic design</a></li>
+                <li><a href="/">Illustration</a></li>
+                <li><a href="/">Logo design</a></li>
+                <li><a href="/">Presentations &amp; documents</a></li>
+                <li><a href="/"><abbr title="User Interface">UI</abbr>/<abbr title="User Experience">UX</abbr></a></li>
+                <li><a href="/">Video production</a></li>
+                <li><a href="/">Web design</a></li>
+                <li><a href="/">Uncategorized</a></li>
+              </ul>
+            </div>
+          </nav>
+          <div class="tags">
+            <header class="title">
+              <h3>Tags</h3>
+              <p>Find works by type, role, <br>and tool.</p>
+            </header>
+            <div class="detail">
+              <div class="types">
+                <nav class="document-types">
+                  <h4>Document types</h4>
+                  <ul>
+                    <li><a href="/">Business card</a></li>
+                    <li><a href="/">Brochure</a></li>
+                    <li><a href="/">Certificate</a></li>
+                    <li><a href="/">Company nameplate</a></li>
+                    <li><a href="/">Company profile</a></li>
+                    <li><a href="/">Direct mail (dm)</a></li>
+                    <li><a href="/">Document</a></li>
+                    <li><a href="/">Envelope</a></li>
+                    <li><a href="/">Event attire</a></li>
+                    <li><a href="/">Event merchandise</a></li>
+                    <li><a href="/">Flyer</a></li>
+                    <li><a href="/">Label</a></li>
+                    <li><a href="/">Leaflet</a></li>
+                    <li><a href="/">Manual</a></li>
+                    <li><a href="/">Office interior</a></li>
+                    <li><a href="/">Proposal</a></li>
+                    <li><a href="/">Smart card</a></li>
+                    <li><a href="/">Special card</a></li>
+                  </ul>
+                </nav>
+                <nav class="site-types">
+                  <h4>Site types</h4>
+                  <ul>
+                    <li><a href="/">Banner</a></li>
+                    <li><a href="/">Careers site</a></li>
+                    <li><a href="/">Corporate site</a></li>
+                    <li><a href="/">E-commerce site</a></li>
+                    <li><a href="/">Landing page</a></li>
+                    <li><a href="/">Service site</a></li>
+                    <li><a href="/">Toolbar</a></li>
+                  </ul>
+                </nav>
+              </div>
+              <div class="roles-tools">
+                <nav class="roles">
+                  <h4>Roles</h4>
+                  <ul>
+                    <li><a href="/">Copywriting</a></li>
+                    <li><a href="/">Design</a></li>
+                    <li><a href="/">Direction</a></li>
+                    <li><a href="/">Frontend development</a></li>
+                    <li><a href="/">Planning</a></li>
+                    <li><a href="/">Production</a></li>
+                  </ul>
+                </nav>
+                <nav class="tools">
+                  <h4>Tools</h4>
+                  <ul>
+                    <li><a href="/">Adobe Illustrator</a></li>
+                    <li><a href="/">Adobe Photoshop</a></li>
+                    <li><a href="/">Adobe XD</a></li>
+                    <li><a href="/">Figma</a></li>
+                    <li><a href="/"><abbr title="HyperText Markup Language">HTML</abbr>/<abbr title="Cascading Style Sheets">CSS</abbr></a></li>
+                    <li><a href="/"><abbr title="JavaScript">JS</abbr></a></li>
+                    <li><a href="/">Microsoft Excel</a></li>
+                    <li><a href="/">Microsoft PowerPoint</a></li>
+                    <li><a href="/">Microsoft Word</a></li>
+                    <li><a href="/"><abbr title="Hypertext Preprocessor">PHP</abbr></a></li>
+                    <li><a href="/">WordPress</a></li>
+                  </ul>
+                </nav>
+              </div>
+            </div>
+          </div>
+          <nav class="archives">
+            <header class="title">
+              <h3>Archives</h3>
+              <p>Browse works <br>by year published.</p>
+            </header>
+            <div class="detail">
+              <ul>
+                <li><a href="/"><data value="2026">2026</data></a></li>
+                <li><a href="/"><data value="2025">2025</data></a></li>
+                <li><a href="/"><data value="2024">2024</data></a></li>
+                <li><a href="/"><data value="2023">2023</data></a></li>
+                <li><a href="/"><data value="2022">2022</data></a></li>
+                <li><a href="/"><data value="2021">2021</data></a></li>
+                <li><a href="/"><data value="2020">2020</data></a></li>
+                <li><a href="/"><data value="2019">2019</data></a></li>
+                <li><a href="/"><data value="2018">2018</data></a></li>
+                <li><a href="/"><data value="2017">2017</data></a></li>
+                <li><a href="/"><data value="2016">2016</data></a></li>
+                <li><a href="/"><data value="2015">2015</data></a></li>
+                <li><a href="/"><data value="2014">2014</data></a></li>
+                <li><a href="/"><data value="2013">2013</data></a></li>
+              </ul>
+            </div>
+          </nav>
+          <nav class="clients">
+            <header class="title">
+              <h3>Clients</h3>
+              <p>Browse clients by name, <br>sorted by initial.</p>
+            </header>
+            <div class="detail">
+              <nav class="iot">
+                <h4>Index of Terms</h4>
+                <ul>
+                  <li><a href="/">あいうえお</a></li>
+                  <li><a href="/">かきくけこ</a></li>
+                  <li><a href="/">さしすせそ</a></li>
+                  <li><a href="/">たちつてと</a></li>
+                  <li><a href="/">なにぬねの</a></li>
+                  <li><a href="/">はひふへほ</a></li>
+                  <li><a href="/">まみむめも</a></li>
+                  <li><a href="/">やゆよ</a></li>
+                  <li><a href="/">わをん</a></li>
+                  <li><a href="/">その他</a></li>
+                </ul>
+              </nav>
+              <nav class="industries">
+                <h4>Industries</h4>
+                <ul>
+                  <li><a href="/">Agriculture, Forestry and Fisheries</a></li>
+                  <li><a href="/">Mining and Quarrying</a></li>
+                  <li><a href="/">Construction</a></li>
+                  <li><a href="/">Manufacturing</a></li>
+                  <li><a href="/">Electricity, Gas, Heat Supply and Water</a></li>
+                  <li><a href="/">Information and Communications</a></li>
+                  <li><a href="/">Transport and Postal</a></li>
+                  <li><a href="/">Wholesale and Retail Trade</a></li>
+                  <li><a href="/">Finance and Insurance</a></li>
+                  <li><a href="/">Real Estate and Rental</a></li>
+                  <li><a href="/">Professional and Technical Services</a></li>
+                  <li><a href="/">Accommodation and Food Services</a></li>
+                  <li><a href="/">Living and Amusement Services</a></li>
+                  <li><a href="/">Education and Learning Support</a></li>
+                  <li><a href="/">Medical and Welfare</a></li>
+                  <li><a href="/">Compound Services</a></li>
+                  <li><a href="/">Not Elsewhere Classified</a></li>
+                </ul>
+              </nav>
+            </div>
+          </nav>
+        </div>
+        <p class="scroll-top"><a href="#top" class="btn">Scroll to top</a></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- site-foot -->
+<footer id="site-foot">
+  <div class="inner">
+    <div class="notice">
+      <div class="mode-select">
+        <button class="btn" type="button" data-mode-cycle>
+          <span class="mode-select-icon" aria-hidden="true">🌗</span> <span class="mode-select-label" aria-live="polite">Mode: System</span>
+        </button>
+      </div>
+      <div class="textpair">
+        <div class="ja" lang="ja">
+          <p>本サイトは制作実績の記録を目的としたアーカイブです。<strong>営業・宣伝を目的としたサイトではありません。</strong></p>
+          <p><small>本サイトに掲載されている商標、ロゴ、サービス名、ブランド名は、各社に帰属します。</small></p>
+          <p>掲載内容の削除又は修正を御希望の場合は、お手数ですが「<a href="/contact/"><i>Contact</i></a>」から御連絡ください。</p>
+        </div>
+        <div class="en" lang="en">
+          <p>This site is an archive of past works and is <strong>not intended for commercial promotion.</strong></p>
+          <p><small>All trademarks, logos, service names, and brand names on this site belong to their respective owners.</small></p>
+          <p>For removal or correction requests, please contact nør. through “<a href="/contact/"><i>Contact</i></a>”.</p>
+        </div>
+      </div>
+      <p class="copyright"><small>© 2013–2026 nør. All Rights Reserved.</small></p>
+    </div>
+    <div class="information">
+      <nav class="fnav" aria-label="Footer navigation">
+        <ul class="nav-list">
+          <li><a href="/">Home</a></li>
+          <li><a href="/categories/">Categories</a></li>
+          <li><a href="/tags/">Tags</a></li>
+          <li><a href="/archives/">Archives</a></li>
+          <li><a href="/clients/">Clients</a></li>
+          <li><a href="/search/">Search</a></li>
+          <li><a href="/about/">About</a></li>
+          <li><a href="/policies/">Policies</a></li>
+          <li><a href="/notes/" aria-current="page">Notes</a></li>
+          <li><a href="/faqs/">FAQs</a></li>
+          <li><a href="/contact/">Contact</a></li>
+        </ul>
+      </nav>
+      <div class="biography">
+        <div class="textpair">
+          <p class="ja" lang="ja"><time datetime="2004">2004年</time>、北海道芸術デザイン専門学校卒業。同年、札幌のデザイン制作会社「株式会社オズ」に入社し、グラフィックデザイン及びWebデザインに従事。その後「株式会社ルーラー」にてWebデザイン及び<abbr title="User Interface">UI</abbr>デザインを中心にディレクターとして経験を積む。<time datetime="2012">2012年</time>、独立し「田村綾佑デザイン事務所」を設立。<time datetime="2014">2014年</time>より「ビットスター株式会社」にて執行役員を務め、制作部門の運営及び経営に携わる。現在、同社でデザインプロデュース及びディレクションを担当するほか、田村綾佑デザイン事務所「<dfn>nør.</dfn>」ではグラフィックデザイン・Webデザインを中心に制作活動を行う。</p>
+          <p class="en" lang="en">Ryousuke Tamura graduated from Hokkaido College of Art &amp; Design in <time datetime="2004">2004</time>. He began his career at Oz Inc. in Sapporo, engaging in graphic and web design, then joined Ruler Inc. as a director focusing on web and <abbr title="User Interface">UI</abbr> design. In <time datetime="2012">2012</time>, he founded Ryousuke Tamura Design Office. Since <time datetime="2014">2014</time>, he has served as an executive officer at Bitstar Inc., overseeing the creative division and business operations. Currently, he leads design production and direction at Bitstar, while working independently under “<dfn>nør.</dfn>”</p>
+        </div>
+        <div class="signature">
+          <p class="tagline">Graphic &amp; Web Design. <br>Not OR. Just right.</p>
+          <div class="logo"><a href="/">nør.</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
