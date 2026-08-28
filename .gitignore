@@ -14,5 +14,29 @@ wp/wp-content/upgrade/
 # Logs
 *.log
 
+# Local environments / secrets
+.env*
+
+# Private keys / certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.ppk
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+
+# Database dumps
+*.sql
+*.sql.gz
+*.dump
+*.sqlite
+*.sqlite3
+
+# Local backups
+*.bak-*
+
 # Node (もし使うなら)
 node_modules/

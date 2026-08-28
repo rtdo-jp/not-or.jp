@@ -97,7 +97,7 @@ html.is-theme-ready :where(
 
 /* Footer spacing */
 #site-foot {
-  padding-block: var(--layout-section-gap-m) var(--layout-section-gap-s);
+  padding-block: var(--layout-section-gap-l) var(--layout-section-gap-s);
 }
 
 /*
@@ -442,6 +442,11 @@ a.skip:hover {
   background-color: transparent;
 }
 
+.pagination .pager-pages a[aria-current="page"] {
+  background-color: var(--color-surface-inverse-current);
+  pointer-events: none;
+}
+
 /* Prev / Next
 ----------------- */
 :where(
@@ -502,6 +507,36 @@ a.skip:hover {
   .pagination {
     margin-inline-start: auto;
     inline-size: var(--layout-desktop-column-11);
+  }
+}
+
+/*
+  Back list
+======================================== */
+.back-list {
+  margin-block-start: var(--layout-section-gap-s);
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-tight);
+  text-align: right;
+}
+
+.back-list a {
+  inline-size: var(--layout-mobile-column-2);
+}
+
+/* Tablet (600px〜1023px)
+---------------------------------------- */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .back-list a {
+    inline-size: var(--layout-tablet-column-2);
+  }
+}
+
+/* Desktop (1024px〜)
+---------------------------------------- */
+@media (min-width: 1024px) {
+  .back-list a {
+    inline-size: var(--layout-desktop-column-2);
   }
 }
 
@@ -692,13 +727,15 @@ a.skip:hover {
 }
 
 /* Inverse */
-:where(.card.client > .head .title) .character-line {
+:where(.card.client > .head .title) .character-line,
+:where(.list-tags .card.taxonomy > .head .title) .character-line {
   --character-line-px: var(--shape-inset-s);
   --character-line-bg: var(--color-surface-inverse-current);
   --character-line-fg: var(--color-text-on-inverse);
 }
 
-:root[data-theme="dark"] :where(.card.client > .head .title) .character-line {
+:root[data-theme="dark"] :where(.card.client > .head .title) .character-line,
+:root[data-theme="dark"] :where(.list-tags .card.taxonomy > .head .title) .character-line {
   --character-line-bg: var(--color-surface-card);
   --character-line-fg: var(--color-text-main);
 }
@@ -2170,7 +2207,6 @@ body.pages #site-head .inner {
 /* Scroll top
 ----------------- */
 .indices .scroll-top {
-  margin-block-start: var(--layout-section-gap-s);
   font-size: var(--type-base-size);
   line-height: var(--type-lh-tight);
   text-align: right;
@@ -2599,7 +2635,7 @@ body.pages #site-head .inner {
   .content-error,
   .card.related:has(+ .indices)
 ) {
-  padding-block-end: var(--layout-section-gap-m);
+  padding-block-end: 0;
 }
 
 .content-works + .card.related {
@@ -3058,11 +3094,21 @@ body.pages #site-head .inner {
 /*
   Card Taxonomy
 ======================================== */
-.card.taxonomy .title h3 a,
+.card.taxonomy .title h3 :where(a, span),
 .card.archive .title h3 a {
   position: relative;
   display: block;
   max-inline-size: 100%;
+}
+
+.card.taxonomy .title h3 span .character-line {
+  --character-line-bg: var(--color-surface-elevated);
+  --character-line-fg: var(--color-text-main);
+}
+
+:root[data-theme="dark"] .card.taxonomy .title h3 span .character-line {
+  --character-line-bg: var(--color-surface-elevated);
+  --character-line-fg: var(--color-text-main);
 }
 
 .card.taxonomy .title h3 a:focus-visible,
@@ -3103,8 +3149,8 @@ body.pages #site-head .inner {
 }
 
 .card.taxonomy .head .index data {
-  background-color: var(--color-surface-accent);
-  color: var(--color-text-on-accent);
+  background-color: var(--color-surface-elevated);
+  color: var(--color-text-sub);
 }
 
 /* Content: ja
@@ -4796,6 +4842,16 @@ body.pages #site-head .inner {
   line-height: var(--type-lh-normal);
 }
 
+/* Body links (always distinguishable from surrounding text)
+----------------- */
+:where(.content-policies .content.policies) article > :where(
+  .detail,
+  .main
+) a:where(:link, :visited) {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 /* Last updated
 ----------------- */
 :where(.content-policies .content.policies) > .body > p {
@@ -5141,7 +5197,7 @@ body.pages #site-head .inner {
   See Also
 ======================================== */
 :where(.see-also) {
-  margin-block: var(--layout-section-gap-s) var(--layout-section-gap-l);
+  margin-block-start: var(--layout-section-gap-m);
   padding-block: var(--shape-pad-m);
   border-top: var(--divider-1);
   background-color: var(--color-surface-bg);
@@ -5149,7 +5205,7 @@ body.pages #site-head .inner {
 }
 
 /* Context */
-:where(.content-notes + .see-also) {
+:where(.content-notes .content.notes.major + .see-also) {
   margin-block: 0;
 }
 
@@ -5983,4 +6039,35 @@ body.contact.is-preview .announcement .message {
       20% 30%,
       20% 30%;
   }
+}
+
+/* Body links (always underline on selected pages)
+----------------- */
+:where(
+  .content-about .content.about > .body,
+  .content-notes .content.notes.major > .body,
+  .content-faqs .content.faqs > .body,
+  .content-policies .content.policies > .body,
+  body.contact .contact-content .contact-form > .notes .textpair,
+  body.contact .contact-sidebar .notes .main
+) a:not(.btn):is(
+  :link,
+  :visited,
+  :hover
+) {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+:where(
+  .content-about .content.about > .body,
+  .content-notes .content.notes.major > .body,
+  .content-faqs .content.faqs > .body,
+  .content-policies .content.policies > .body,
+  body.contact .contact-content .contact-form > .notes .textpair,
+  body.contact .contact-sidebar .notes .main
+) a:not(.btn):focus-visible {
+  text-decoration: none;
+  outline: none;
+  box-shadow: var(--focus-ring);
 }

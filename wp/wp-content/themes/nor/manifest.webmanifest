@@ -11,12 +11,12 @@
   "background_color": "#ffffff",
   "icons": [
     {
-      "src": "/assets/img/android-chrome-icon.png",
+      "src": "/wp-content/themes/nor/assets/img/android-chrome-icon.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/assets/img/app-icon.png",
+      "src": "/wp-content/themes/nor/assets/img/app-icon.png",
       "sizes": "512x512",
       "type": "image/png"
     }
