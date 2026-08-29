@@ -170,6 +170,17 @@
   } elseif ($seo_canonical_override !== '') {
     $page_url = (string) $seo_canonical_override;
   }
+
+  // Writings list pagination: the fixed page's nor_canonical_override is a
+  // page-1-only value ("/writings/") and must not be reused as-is on later
+  // pages — each page self-canonicalizes to its own /writings/page/N/ URL.
+  if (function_exists('is_page') && is_page('writings')) {
+    $writings_paged = max(1, (int) get_query_var('paged'));
+    if ($writings_paged > 1) {
+      $page_url = home_url('/writings/page/' . $writings_paged . '/');
+    }
+  }
+
   if (function_exists('nor_seo_meta_normalize_url')) {
     $normalized_page_url = (string) nor_seo_meta_normalize_url((string) $page_url);
     if ($normalized_page_url !== '') {
@@ -913,20 +924,12 @@
   $render_nav_menu([
     'theme_location' => 'global_primary',
   ], 6);
-?>
-      <div>
-<?php
-  // Secondary Left (Bottom row, left column)
-  $render_nav_menu([
-    'theme_location' => 'global_secondary_left',
-  ], 8);
 
-  // Secondary Right (Bottom row, right column)
+  // Secondary (Bottom row)
   $render_nav_menu([
-    'theme_location' => 'global_secondary_right',
-  ], 8);
+    'theme_location' => 'global_secondary',
+  ], 6);
 ?>
-      </div>
     </nav>
 <?php if ($is_home) : ?>
     <div class="cookie-agree" hidden>

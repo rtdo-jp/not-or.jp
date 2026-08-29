@@ -20,7 +20,7 @@
 
   $landing = nor_get_landing_page_shell_args($page_id, [
     'count'               => (int) $client_count,
-    'unit'                => 'clients indexed.',
+    'unit'                => nor_format_count_unit((int) $client_count, 'client', 'clients', 'indexed'),
     'title_fallback'      => 'Clients',
     'section_h2_fallback' => '—',
   ]);
@@ -47,7 +47,7 @@
     'desc_en' => $page_desc_en,
 
     'count' => (int) $client_count,
-    'unit'  => 'clients indexed.',
+    'unit'  => nor_format_count_unit((int) $client_count, 'client', 'clients', 'indexed'),
 
     // Tabs widget
     'widget'        => 'tabs',

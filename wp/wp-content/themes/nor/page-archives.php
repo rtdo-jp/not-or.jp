@@ -11,7 +11,7 @@
 
     $landing = nor_get_landing_page_shell_args($page_id, [
       'count' => 0,
-      'unit' => 'years archived.',
+      'unit' => nor_format_count_unit(0, 'year', 'years', 'archived'),
       'title_fallback' => 'Archives',
       'section_h2_fallback' => '—',
     ]);
@@ -54,7 +54,7 @@
     // ===== Hero (pages common) =====
     // NOTE: title/tagline/desc are expected to be provided via Page fields/meta.
     $hero_args['count'] = $years_count;
-    $hero_args['unit'] = 'years archived.';
+    $hero_args['unit'] = nor_format_count_unit((int) $years_count, 'year', 'years', 'archived');
     $hero_args['widget'] = 'none';
     $hero_args['breadcrumbs'] = nor_build_single_breadcrumb($page_title);
 

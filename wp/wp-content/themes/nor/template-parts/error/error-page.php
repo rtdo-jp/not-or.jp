@@ -58,7 +58,7 @@ $include_indices = array_key_exists('include_indices', $args) ? (bool) $args['in
 
 $hero_args = [
   'count'    => $works_count,
-  'unit'     => 'works archived.',
+  'unit'     => nor_format_count_unit($works_count, 'work', 'works', 'archived'),
   'title'    => $title,
   'tagline'  => $tagline,
   'desc_ja'  => $desc_ja,

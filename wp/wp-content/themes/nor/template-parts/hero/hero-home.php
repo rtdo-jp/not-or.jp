@@ -8,6 +8,7 @@
  */
 
 $works_count = nor_get_published_works_count();
+$works_count_unit = nor_format_count_unit($works_count, 'work', 'works', 'archived');
 ?>
 
   <section class="hero">
@@ -21,7 +22,7 @@ $works_count = nor_get_published_works_count();
         <div class="stats">
           <p class="pair">
             <data class="count" value="<?php echo esc_attr($works_count); ?>"><?php echo esc_html($works_count); ?></data>
-            <span class="unit">works archived.</span>
+            <span class="unit"><?php echo esc_html($works_count_unit); ?></span>
           </p>
           <p class="permission">Visuals appear only <br>with client permission. <br>Otherwise, entries remain <br>as <strong>text — never lost</strong>.</p>
         </div>

@@ -34,7 +34,7 @@
     // Keep admin input plain text; enrich only output semantics.
     $landing = nor_get_landing_page_shell_args((int) $page_id, [
       'count' => (int) $category_count,
-      'unit' => 'categories listed.',
+      'unit' => nor_format_count_unit((int) $category_count, 'category', 'categories', 'listed'),
       'desc_abbr_map' => [
         'UI' => 'User Interface',
       ],

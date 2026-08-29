@@ -40,7 +40,7 @@
 
     $landing = nor_get_landing_page_shell_args((int) $page_id, [
       'count' => (int) $tag_group_count,
-      'unit' => 'tag groups.',
+      'unit' => nor_format_count_unit((int) $tag_group_count, 'tag group', 'tag groups'),
     ]);
     $hero_args = is_array($landing['hero_args'] ?? null) ? $landing['hero_args'] : [];
     $section_h2_ja = (string) ($landing['section_h2_ja'] ?? '—');

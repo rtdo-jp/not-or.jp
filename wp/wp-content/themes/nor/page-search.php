@@ -7,7 +7,7 @@
     $page_id = get_queried_object_id();
     $landing = nor_get_landing_page_shell_args($page_id, [
       'count' => 0,
-      'unit' => 'works archived.',
+      'unit' => nor_format_count_unit(0, 'work', 'works', 'archived'),
       'title_fallback' => 'Search',
       'section_h2_fallback' => '—',
     ]);
@@ -46,7 +46,7 @@
     // - default: total published works / "works archived."
     // - searching: matched works / "search results."
     $hero_count = $works_count;
-    $hero_unit  = 'works archived.';
+    $hero_unit  = nor_format_count_unit($works_count, 'work', 'works', 'archived');
 
     $display_q = null;
     $matched_work_ids = [];

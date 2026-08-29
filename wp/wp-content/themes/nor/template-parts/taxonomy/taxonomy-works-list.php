@@ -106,7 +106,7 @@ $card_line_break = str_repeat("\n", $card_newline_count);
 
       // Stats
       'count' => $works_count,
-      'unit'  => 'works archived.',
+      'unit'  => nor_format_count_unit($works_count, 'work', 'works', 'archived'),
 
       // Widget
       'widget' => 'none',

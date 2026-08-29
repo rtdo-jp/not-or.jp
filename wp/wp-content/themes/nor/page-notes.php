@@ -10,7 +10,7 @@
     $content_ctx = nor_get_content_page_hero_context((int) $page_id, [
       'title_fallback' => 'Notes',
       'section_h2_fallback' => '—',
-      'unit' => 'works archived.',
+      'unit' => nor_format_count_unit(nor_get_published_works_count(), 'work', 'works', 'archived'),
       'widget' => 'none',
     ]);
     $title = (string) ($content_ctx['title'] ?? 'Notes');
@@ -25,7 +25,7 @@
 
     $hero_args = is_array($content_ctx['hero_args'] ?? null) ? $content_ctx['hero_args'] : [
       'count' => nor_get_published_works_count(),
-      'unit' => 'works archived.',
+      'unit' => nor_format_count_unit(nor_get_published_works_count(), 'work', 'works', 'archived'),
       'title' => $title,
       'tagline' => $tagline,
       'desc_ja' => $desc_ja,

@@ -18,7 +18,7 @@
       'desc_ja'  => $desc_ja,
       'desc_en'  => $desc_en,
       'count'    => $works_count,
-      'unit'     => 'works archived.',
+      'unit'     => nor_format_count_unit($works_count, 'work', 'works', 'archived'),
       'widget'   => 'none',
       'breadcrumbs' => nor_build_breadcrumbs([
         ['label' => 'Works', 'url' => home_url('/works/')],

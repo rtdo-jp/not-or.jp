@@ -292,6 +292,11 @@ const NorShared = (() => {
   const applyThemeAttr = (theme) => {
     if (theme === THEME_DARK) root.setAttribute(ATTR_THEME, THEME_DARK);
     else root.setAttribute(ATTR_THEME, THEME_LIGHT);
+
+    // The inline background-color set in <head> only guards against a flash
+    // before CSS loads. Once JS owns data-theme, drop it so html[data-theme]
+    // stays in sync on later mode switches instead of freezing at page-load's color.
+    root.style.removeProperty("background-color");
   };
 
   const ensureLabelSpan = (btn) => {
@@ -1026,7 +1031,7 @@ const NorShared = (() => {
 // Skeleton (Works detail only / lightweight)
 // ========================================
 (() => {
-  const SELECTOR_WORKS_CONTENT = ".content-works";
+  const SELECTOR_WORKS_CONTENT = ".content-works, .content-writings";
   const SELECTOR_FIGURE = "figure.skeleton-figure";
   const SELECTOR_IMG = "img";
   const CLASS_SKELETON = "skeleton";
@@ -2284,6 +2289,65 @@ const NorShared = (() => {
     }, Math.max(0, Number(HOLD_MS) || 160));
 
     bind(cleanup);
+  };
+
+  init();
+})();
+
+// ========================================
+// Overscroll top / bottom (prototype)
+// ========================================
+(() => {
+  // Kept equal to --motion-duration-s so the CSS fade-back and the class
+  // removal land together.
+  const RELEASE_DELAY_MS = 180;
+  const CLASS_OVERSCROLLING_TOP = "is-overscrolling-top";
+  const CLASS_OVERSCROLLING_BOTTOM = "is-overscrolling-bottom";
+
+  const root = document.documentElement;
+  let releaseTimer = 0;
+  let bottomReleaseTimer = 0;
+
+  const release = () => {
+    releaseTimer = 0;
+    root.classList.remove(CLASS_OVERSCROLLING_TOP);
+  };
+
+  const releaseBottom = () => {
+    bottomReleaseTimer = 0;
+    root.classList.remove(CLASS_OVERSCROLLING_BOTTOM);
+  };
+
+  // Sub-pixel/rounding differences mean scrollY + innerHeight rarely lands
+  // on scrollHeight exactly, so allow a small tolerance instead of requiring
+  // an exact match (same reasoning as the top check's scrollY <= 0).
+  const isAtBottom = () =>
+    window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
+
+  const onWheel = (e) => {
+    // scrollY can already read slightly negative mid-bounce on macOS Chrome,
+    // so treat "at or past the top" as the trigger rather than an exact 0.
+    if (window.scrollY <= 0 && e.deltaY < 0) {
+      root.classList.add(CLASS_OVERSCROLLING_TOP);
+
+      clearTimeout(releaseTimer);
+      releaseTimer = window.setTimeout(release, RELEASE_DELAY_MS);
+    }
+
+    if (e.deltaY > 0 && isAtBottom()) {
+      root.classList.add(CLASS_OVERSCROLLING_BOTTOM);
+
+      clearTimeout(bottomReleaseTimer);
+      bottomReleaseTimer = window.setTimeout(releaseBottom, RELEASE_DELAY_MS);
+    }
+  };
+
+  const bind = () => {
+    window.addEventListener("wheel", onWheel, { passive: true });
+  };
+
+  const init = () => {
+    bind();
   };
 
   init();

@@ -45,9 +45,8 @@ endif;
 <?php
           // Footer navigation: list only links registered in WP menus.
           // No static fallback list is injected by code.
-          $has_primary = has_nav_menu('global_primary');
-          $has_left    = has_nav_menu('global_secondary_left');
-          $has_right   = has_nav_menu('global_secondary_right');
+          $has_primary   = has_nav_menu('global_primary');
+          $has_secondary = has_nav_menu('global_secondary');
 
           // Merge menu items into one <ul> and normalize indentation/newlines.
           $render_menu_items = function (string $location): string {
@@ -67,11 +66,8 @@ endif;
           if ($has_primary) {
             $items .= $render_menu_items('global_primary');
           }
-          if ($has_left) {
-            $items .= $render_menu_items('global_secondary_left');
-          }
-          if ($has_right) {
-            $items .= $render_menu_items('global_secondary_right');
+          if ($has_secondary) {
+            $items .= $render_menu_items('global_secondary');
           }
 
           $items = trim((string) preg_replace('/\r\n?/', "\n", (string) $items));

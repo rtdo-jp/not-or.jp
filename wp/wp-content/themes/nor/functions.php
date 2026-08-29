@@ -10,9 +10,8 @@ add_action('after_setup_theme', function () {
   add_theme_support('post-thumbnails');
 
   register_nav_menus([
-    'global_primary'         => 'Global navigation (Primary)',
-    'global_secondary_left'  => 'Global navigation (Pages)',
-    'global_secondary_right' => 'Global navigation (Supports)',
+    'global_primary'   => 'Global navigation (Primary)',
+    'global_secondary' => 'Global navigation (Secondary)',
   ]);
 
 });
@@ -1357,6 +1356,29 @@ function nor_get_published_works_count(): int {
 }
 
 /**
+ * Get published Writings (post) count.
+ */
+function nor_get_published_writings_count(): int {
+  $c = wp_count_posts('post');
+  if (!$c || is_wp_error($c) || !isset($c->publish)) {
+    return 0;
+  }
+  return (int) $c->publish;
+}
+
+/**
+ * Format a count-dependent noun (+ optional verb) for the shared
+ * "<data class=count>N</data><span class=unit>...</span>" stat pattern.
+ * count === 1 uses $singular; every other count (including 0) uses $plural.
+ * Pass verb='' for nouns that stand alone with no verb (e.g. "tag groups.").
+ */
+function nor_format_count_unit(int $count, string $singular, string $plural, string $verb = ''): string {
+  $noun = trim(($count === 1) ? $singular : $plural);
+  $verb = trim($verb);
+  return ($verb !== '') ? ($noun . ' ' . $verb . '.') : ($noun . '.');
+}
+
+/**
  * Get section heading pair from page meta.
  *
  * @return array{ja:string,en:string}
@@ -1650,6 +1672,19 @@ function nor_get_header_schema_context(string $site_url, string $page_url, strin
         ? nor_get_term_public_name($term, (string) $term->name)
         : (string) $term->name;
       $breadcrumbs[] = ['name' => $label, 'url' => $page_url];
+    }
+  } elseif (function_exists('is_page') && is_page('writings')) {
+    // Writings list (fixed page "writings", rendered by page-writings.php).
+    // /writings/page/{n}/ is resolved by a dedicated top-priority rewrite rule
+    // straight to the `paged` query var (see the add_rewrite_rule() call for
+    // '^writings/page/...'), not WordPress's default page `page` query var.
+    $schema_page_type = 'CollectionPage';
+    $breadcrumbs[] = ['name' => 'Writings', 'url' => home_url('/writings/')];
+    $writings_page_num = max(1, (int) get_query_var('paged'));
+    if ($writings_page_num > 1) {
+      $breadcrumbs[] = ['name' => 'Page ' . $writings_page_num, 'url' => $page_url];
+    } else {
+      $breadcrumbs[] = ['name' => 'Writings Index', 'url' => home_url('/writings/')];
     }
   } elseif (function_exists('is_404') && is_404()) {
     $schema_page_type = 'WebPage';
@@ -3469,7 +3504,9 @@ add_action('init', function () {
     ],
     'public'        => true,
     'has_archive'   => true,
-    'rewrite'       => ['slug' => 'works'],
+    // with_front: false — otherwise the sitewide permalink structure's leading
+    // static segment (currently "/writings/") would be prepended to this slug.
+    'rewrite'       => ['slug' => 'works', 'with_front' => false],
     'menu_position' => 20,
     'menu_icon'     => 'dashicons-portfolio',
     'supports'      => ['title', 'excerpt', 'thumbnail', 'revisions'],
@@ -3529,7 +3566,7 @@ add_action('init', function () {
     ],
     'public'       => true,
     'hierarchical' => true,
-    'rewrite'      => ['slug' => 'categories'],
+    'rewrite'      => ['slug' => 'categories', 'with_front' => false],
     'show_in_rest' => true,
     'show_ui'      => true,
   ]);
@@ -3552,7 +3589,7 @@ add_action('init', function () {
     ],
     'public'       => true,
     'hierarchical' => true,
-    'rewrite'      => ['slug' => 'tags', 'hierarchical' => true],
+    'rewrite'      => ['slug' => 'tags', 'hierarchical' => true, 'with_front' => false],
     'show_in_rest' => true,
     'show_ui'      => true,
   ]);
@@ -3573,7 +3610,7 @@ add_action('init', function () {
     ],
     'public'       => true,
     'hierarchical' => false,
-    'rewrite'      => ['slug' => 'clients'],
+    'rewrite'      => ['slug' => 'clients', 'with_front' => false],
     'show_in_rest' => true,
     'show_ui'      => true,
   ]);
@@ -3596,7 +3633,7 @@ add_action('init', function () {
     ],
     'public'       => true,
     'hierarchical' => false,
-    'rewrite'      => ['slug' => 'works/industries'],
+    'rewrite'      => ['slug' => 'works/industries', 'with_front' => false],
     'show_in_rest' => true,
     'show_ui'      => true,
     // Hide the taxonomy meta box on the Works edit screen.
@@ -4412,6 +4449,15 @@ add_action('init', function () {
   add_rewrite_rule('^archives/([0-9]{4})/page/([0-9]{1,})/?$', 'index.php?post_type=works&year=$matches[1]&paged=$matches[2]&nor_year=$matches[1]', 'top');
 });
 
+// Writings list pagination: /writings/page/{n}/ -> pagename=writings + paged=n.
+// WordPress's default page rewrite rule would otherwise resolve this to the
+// `page` query var (the <!--nextpage--> content-splitting mechanism), not
+// list pagination — this dedicated, top-priority rule takes precedence and
+// does not affect the standard /writings/{slug}/ post permalink.
+add_action('init', function () {
+  add_rewrite_rule('^writings/page/([0-9]{1,})/?$', 'index.php?pagename=writings&paged=$matches[1]', 'top');
+});
+
 add_filter('template_include', function ($template) {
   $year = get_query_var('nor_year');
   if ($year) {
@@ -4519,7 +4565,7 @@ add_action('add_meta_boxes_page', function ($post) {
   if (!$post instanceof WP_Post) return;
 
   $slug = $post->post_name;
-  $targets = ['categories', 'tags', 'archives', 'clients', 'iot', 'industries', 'search', 'about', 'policies', 'notes', 'faqs', 'contact'];
+  $targets = ['categories', 'tags', 'archives', 'clients', 'iot', 'industries', 'search', 'about', 'policies', 'notes', 'faqs', 'contact', 'writings'];
   if (!in_array($slug, $targets, true)) return;
 
   add_meta_box(
@@ -4575,7 +4621,7 @@ add_action('save_post_page', function ($post_id) {
   if (!current_user_can('edit_page', $post_id)) return;
 
   $slug = get_post_field('post_name', $post_id);
-  $targets = ['categories', 'tags', 'archives', 'clients', 'iot', 'industries', 'search', 'about', 'policies', 'notes', 'faqs', 'contact'];
+  $targets = ['categories', 'tags', 'archives', 'clients', 'iot', 'industries', 'search', 'about', 'policies', 'notes', 'faqs', 'contact', 'writings'];
   if (!in_array($slug, $targets, true)) return;
 
   if (!isset($_POST['nor_landing_page_copy_nonce']) || !wp_verify_nonce($_POST['nor_landing_page_copy_nonce'], 'nor_landing_page_copy_save')) return;
@@ -4651,11 +4697,13 @@ add_action('save_post_page', function ($post_id) {
  *   - nor_robots_override
  */
 function nor_seo_meta_target_page_slugs(): array {
-  return ['categories', 'tags', 'archives', 'clients', 'iot', 'industries', 'search', 'about', 'policies', 'notes', 'faqs', 'contact'];
+  return ['categories', 'tags', 'archives', 'clients', 'iot', 'industries', 'search', 'about', 'policies', 'notes', 'faqs', 'contact', 'writings'];
 }
 
 function nor_is_seo_meta_target_post(WP_Post $post): bool {
   if ($post->post_type === 'works') return true;
+  // Writings (standard post) get the same SEO / LLMO meta box as Works.
+  if ($post->post_type === 'post') return true;
   if ($post->post_type !== 'page') return false;
   return in_array((string) $post->post_name, nor_seo_meta_target_page_slugs(), true);
 }
@@ -4742,11 +4790,15 @@ function nor_render_seo_meta_box(WP_Post $post): void {
   $robots_override = is_string($robots_override) ? trim($robots_override) : '';
 
   $is_works = ($post->post_type === 'works');
-  $has_featured = $is_works ? has_post_thumbnail($post->ID) : false;
+  // Writings (post) share the exact same "rich" SEO treatment as Works
+  // (featured-image OG, excerpt+nor_summary_en descriptions, reflect button).
+  $is_writing = ($post->post_type === 'post');
+  $seo_rich = ($is_works || $is_writing);
+  $has_featured = $seo_rich ? has_post_thumbnail($post->ID) : false;
   $has_custom_og = (trim($og_image_override) !== '');
   $default_og_image = trim((string) get_option('nor_default_og_image_override', ''));
   $featured_og = '';
-  if ($is_works && $has_featured) {
+  if ($seo_rich && $has_featured) {
     $thumb = get_the_post_thumbnail_url($post->ID, 'full');
     if (is_string($thumb) && $thumb !== '') $featured_og = $thumb;
   }
@@ -4772,21 +4824,13 @@ function nor_render_seo_meta_box(WP_Post $post): void {
     }
   }
 
-  $title_auto = '';
-  $title_segments = [];
-  $title_seen = [];
-  $push_unique = static function (array &$segments, array &$seen, string $value): void {
-    $value = trim($value);
-    if ($value === '') return;
-    $key = function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
-    if (isset($seen[$key])) return;
-    $segments[] = $value;
-    $seen[$key] = true;
-  };
-  $push_unique($title_segments, $title_seen, $title_head);
-  $push_unique($title_segments, $title_seen, $is_works ? 'Works' : $current_name);
-  $push_unique($title_segments, $title_seen, $site_name_for_title);
-  if (!empty($title_segments)) $title_auto = implode(' | ', $title_segments);
+  // Common rule for all three: {Title}[ - {Tagline}][ | {section label}] | {tail}.
+  // Works/Writings insert a section label ("Works"/"Writings"); Pages insert none.
+  // Title and OG Title are built independently (OG Title's tail is always the
+  // short "nør." brand mark instead of the full site name).
+  $section_label = $is_works ? 'Works' : ($is_writing ? 'Writings' : '');
+  $title_auto = implode(' | ', array_filter([$title_head, $section_label, $site_name_for_title], fn($s) => $s !== ''));
+  $og_title_auto = implode(' | ', array_filter([$title_head, $section_label, 'nør.'], fn($s) => $s !== ''));
   $title_input = ($title_override !== '') ? $title_override : $title_auto;
 
   $default_desc_ja = $normalize_meta_line((string) get_option('nor_default_meta_desc_ja_override', ''));
@@ -4794,7 +4838,7 @@ function nor_render_seo_meta_box(WP_Post $post): void {
 
   $desc_ja_base = '';
   $desc_en_base = '';
-  if ($is_works) {
+  if ($seo_rich) {
     $excerpt = get_the_excerpt($post->ID);
     $desc_ja_base = is_string($excerpt) ? $excerpt : '';
     $desc_en_base = (string) get_post_meta($post->ID, 'nor_summary_en', true);
@@ -4826,7 +4870,10 @@ function nor_render_seo_meta_box(WP_Post $post): void {
       $og_image_input = $default_og_image;
     }
   }
-  $og_title_input = ($og_title_override !== '') ? $og_title_override : $title_input;
+  // OG Title has its own auto value (ends in "nør.") for all three post types and
+  // does not fall back through Title's own override, since they're generated
+  // independently of one another.
+  $og_title_input = ($og_title_override !== '') ? $og_title_override : $og_title_auto;
 
   wp_nonce_field('nor_seo_meta_save', 'nor_seo_meta_nonce');
 
@@ -4838,7 +4885,10 @@ function nor_render_seo_meta_box(WP_Post $post): void {
 
   echo '<p style="margin-top:12px;"><label for="nor_meta_desc_en_override"><strong>Description（EN）</strong></label></p>';
   echo '<textarea name="nor_meta_desc_en_override" id="nor_meta_desc_en_override" rows="3" style="width:100%">' . esc_textarea($desc_en_input) . '</textarea>';
-  if ($is_works) {
+  // Shown for every SEO/LLMO target post type (Works, Writings, and every
+  // target-slug page) — nor_render_seo_meta_box() is already gated to these
+  // above, so this is unconditional rather than re-checking $seo_rich.
+  if (true) {
     echo '<p style="margin-top:10px;">';
     echo '<button type="button" class="button" id="nor_seo_apply_from_body">本文情報を反映</button>';
     echo '<span id="nor_seo_apply_from_body_status" class="description" style="margin-left:8px;"></span>';
@@ -4856,8 +4906,9 @@ function nor_render_seo_meta_box(WP_Post $post): void {
   echo '</div>';
   if ($uses_default_og) {
     echo '<p id="nor_og_image_default_warn" style="margin-top:6px; color:#b32d2e;"><strong>OG Image が個別設定されていません。現在はデフォルト画像が使用されます。</strong></p>';
-  } elseif (!$has_custom_og && $is_works && $has_featured) {
-    echo '<p class="description" style="margin-top:6px;">このWorksはアイキャッチ画像をOG画像として使用します。</p>';
+  } elseif (!$has_custom_og && $seo_rich && $has_featured) {
+    $og_source_label = $is_works ? 'Works' : 'Writing';
+    echo '<p class="description" style="margin-top:6px;">この' . esc_html($og_source_label) . 'はアイキャッチ画像をOG画像として使用します。</p>';
   } else {
     echo '<p class="description" style="margin-top:6px;">個別設定したOG画像が優先されます。</p>';
   }
@@ -4993,11 +5044,15 @@ function nor_render_seo_meta_box(WP_Post $post): void {
     })();
   </script>';
 
-  if ($is_works) {
+  // Shown for every SEO/LLMO target post type (see note above the button).
+  if (true) {
+    $seo_section_label = $is_works ? 'Works' : ($is_writing ? 'Writings' : 'Page');
     echo '<script>
       (function () {
         if (window.norWorksSeoReflectInit) return;
         window.norWorksSeoReflectInit = true;
+
+        var norSeoSectionLabel = ' . wp_json_encode($seo_section_label) . ';
 
         function normalizeMetaLine(text) {
           var s = String(text || "").trim();
@@ -5063,6 +5118,13 @@ function nor_render_seo_meta_box(WP_Post $post): void {
         }
 
         function getWorksExcerptJa() {
+          if (norSeoSectionLabel === "Page") {
+            // Pages: Description (JA) comes from nor_desc_ja, not the excerpt.
+            return pickFirstNonEmpty([
+              getInputValue("nor_desc_ja"),
+              getEditedMetaValue("nor_desc_ja")
+            ]);
+          }
           return pickFirstNonEmpty([
             getInputValue("excerpt"),
             getEditedPostAttribute("excerpt")
@@ -5070,6 +5132,13 @@ function nor_render_seo_meta_box(WP_Post $post): void {
         }
 
         function getWorksSummaryEn() {
+          if (norSeoSectionLabel === "Page") {
+            // Pages: Description (EN) comes from nor_desc_en, not nor_summary_en.
+            return pickFirstNonEmpty([
+              getInputValue("nor_desc_en"),
+              getEditedMetaValue("nor_desc_en")
+            ]);
+          }
           return pickFirstNonEmpty([
             getInputValue("nor_summary_en"),
             getEditedMetaValue("nor_summary_en")
@@ -5093,23 +5162,35 @@ function nor_render_seo_meta_box(WP_Post $post): void {
           segments.push(v);
         }
 
-        function buildWorksSeoTitle() {
+        function buildSeoTitle(tailLabel) {
+          // Common rule for all three: {Title}[ - {Tagline}][ | {section label}] | {tail}.
+          // Works/Writings insert a section label; Pages insert none.
           var currentName = normalizeMetaLine(getWorksTitle());
           var tagline = normalizeMetaLine(getWorksTagline());
-          var titleHead = currentName;
+          var head = currentName;
           if (tagline) {
-            if (!titleHead) {
-              titleHead = tagline;
-            } else if (tagline.toLowerCase() !== titleHead.toLowerCase()) {
-              titleHead = titleHead + " - " + tagline;
+            if (!head) {
+              head = tagline;
+            } else if (tagline.toLowerCase() !== head.toLowerCase()) {
+              head = head + " - " + tagline;
             }
           }
 
+          var sectionLabel = (norSeoSectionLabel === "Page") ? "" : norSeoSectionLabel;
+
           var segments = [];
-          pushUnique(segments, titleHead);
-          pushUnique(segments, "Works");
-          pushUnique(segments, "nør. Ryousuke Tamura Design Office");
+          pushUnique(segments, head);
+          pushUnique(segments, sectionLabel);
+          pushUnique(segments, tailLabel);
           return segments.join(" | ");
+        }
+
+        function buildWorksSeoTitle() {
+          return buildSeoTitle("nør. Ryousuke Tamura Design Office");
+        }
+
+        function buildWorksSeoOgTitle() {
+          return buildSeoTitle("nør.");
         }
 
         function setFieldValue(id, value) {
@@ -5202,6 +5283,7 @@ function nor_render_seo_meta_box(WP_Post $post): void {
 
           var applied = 0;
           var title = normalizeMetaLine(buildWorksSeoTitle());
+          var ogTitle = normalizeMetaLine(buildWorksSeoOgTitle());
           var descJa = normalizeMetaLine(getWorksExcerptJa());
           var descEn = normalizeMetaLine(getWorksSummaryEn());
           var canonical = normalizeMetaLine(getCanonicalAuto());
@@ -5209,7 +5291,9 @@ function nor_render_seo_meta_box(WP_Post $post): void {
 
           if (title !== "") {
             if (setFieldValue("nor_meta_title_override", title)) applied++;
-            if (setFieldValue("nor_og_title_override", title)) applied++;
+          }
+          if (ogTitle !== "") {
+            if (setFieldValue("nor_og_title_override", ogTitle)) applied++;
           }
           if (descJa !== "") {
             if (setFieldValue("nor_meta_desc_ja_override", descJa)) applied++;
@@ -5257,6 +5341,21 @@ add_action('add_meta_boxes_works', function ($post) {
     'SEO / LLMO',
     'nor_render_seo_meta_box',
     'works',
+    'side',
+    'default'
+  );
+});
+
+// Writings (standard post): same SEO / LLMO meta box as Works, same render/save.
+add_action('add_meta_boxes_post', function ($post) {
+  if (!$post instanceof WP_Post) return;
+  if (!nor_is_seo_meta_target_post($post)) return;
+
+  add_meta_box(
+    'nor_seo_meta',
+    'SEO / LLMO',
+    'nor_render_seo_meta_box',
+    'post',
     'side',
     'default'
   );
@@ -10907,3 +11006,536 @@ add_action('nor_contact_cleanup_event', function () {
     }
   } while (!empty($query->posts));
 });
+
+/**
+ * ========================================
+ * Writings (standard post) — Admin fields, validation, notices
+ * ========================================
+ * Mirrors the Works admin pattern (meta box shape, sanitize, save,
+ * required/unique numbering, draft-force validation, transient notices),
+ * independently implemented for post_type = 'post'. Works' own functions,
+ * meta boxes, save handlers, and notices are not touched or shared.
+ *
+ * Meta keys:
+ * - nor_writing_no                (required, unique)
+ * - nor_tagline                   (tagline)
+ * - nor_summary_en                (Summary EN / SEO description source, future use)
+ * - nor_writing_body_summary_en   (English Summary block at the end of the article body)
+ */
+
+// Register Writings meta for the block editor (REST). Without this, meta box values
+// (e.g. nor_writing_no) may not be included in publish/update requests, and hard
+// validation may not see the submitted values.
+add_action('init', function () {
+  $writing_meta_args = [
+    'type'              => 'string',
+    'single'            => true,
+    'show_in_rest'      => true,
+    'sanitize_callback' => 'sanitize_text_field',
+    'auth_callback'     => function () { return current_user_can('edit_posts'); },
+  ];
+
+  register_post_meta('post', 'nor_writing_no', $writing_meta_args);
+  register_post_meta('post', 'nor_tagline', $writing_meta_args);
+
+  register_post_meta('post', 'nor_summary_en', [
+    'type'              => 'string',
+    'single'            => true,
+    'show_in_rest'      => true,
+    'sanitize_callback' => 'wp_kses_post',
+    'auth_callback'     => function () { return current_user_can('edit_posts'); },
+  ]);
+
+  register_post_meta('post', 'nor_writing_body_summary_en', [
+    'type'              => 'string',
+    'single'            => true,
+    'show_in_rest'      => true,
+    'sanitize_callback' => 'wp_kses_post',
+    'auth_callback'     => function () { return current_user_can('edit_posts'); },
+  ]);
+});
+
+/**
+ * Writings: numbering helpers (mirrors nor_normalize_work_no / nor_find_work_id_by_work_no)
+ */
+function nor_normalize_writing_no($raw): string {
+  $s = is_string($raw) ? trim($raw) : '';
+  // keep digits only
+  $s = preg_replace('/[^0-9]/', '', $s);
+  if ($s === '') return '';
+  // normalize to integer string (remove leading zeros)
+  $n = (int) $s;
+  if ($n <= 0) return '';
+  return (string) $n;
+}
+
+function nor_find_writing_id_by_writing_no(string $writing_no, int $exclude_post_id = 0): int {
+  $writing_no = nor_normalize_writing_no($writing_no);
+  if ($writing_no === '') return 0;
+
+  // NOTE:
+  // Older posts may have stored values like "020" or non-normalized strings.
+  // We therefore fetch candidate IDs by meta_key existence and compare after normalization in PHP.
+  $q = new WP_Query([
+    'post_type'      => 'post',
+    'post_status'    => 'any',
+    'posts_per_page' => -1,
+    'fields'         => 'ids',
+    'no_found_rows'  => true,
+    'meta_query'     => [[
+      'key'     => 'nor_writing_no',
+      'compare' => 'EXISTS',
+    ]],
+  ]);
+
+  $ids = is_array($q->posts) ? $q->posts : [];
+  wp_reset_postdata();
+
+  foreach ($ids as $id) {
+    $id = (int) $id;
+    if ($id <= 0) continue;
+    if ($exclude_post_id > 0 && $id === (int) $exclude_post_id) continue;
+
+    $stored = get_post_meta($id, 'nor_writing_no', true);
+    $stored = nor_normalize_writing_no($stored);
+
+    if ($stored !== '' && $stored === $writing_no) {
+      return $id;
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Writings: admin notice helpers (mirrors nor_append_work_admin_notice and friends)
+ * Transient keys are namespaced separately from Works (nor_writing_admin_notice_*)
+ * so the two systems never collide.
+ */
+function nor_append_writing_admin_notice(int $post_id, string $line): void {
+  if ($post_id <= 0) return;
+  $key = 'nor_writing_admin_notice_' . $post_id;
+
+  $existing = get_transient($key);
+  $existing = is_string($existing) ? trim($existing) : '';
+
+  $lines = [];
+  if ($existing !== '') {
+    $lines = preg_split("/\r\n|\r|\n/", $existing);
+    $lines = array_filter(array_map('trim', (array) $lines));
+  }
+
+  $line = trim($line);
+  if ($line === '') return;
+  if (!in_array($line, $lines, true)) {
+    $lines[] = $line;
+  }
+
+  if (empty($lines)) {
+    delete_transient($key);
+    return;
+  }
+
+  set_transient($key, implode("\n", $lines), 5 * MINUTE_IN_SECONDS);
+}
+
+function nor_remove_writing_admin_notice_lines(int $post_id, callable $keep_line): void {
+  if ($post_id <= 0) return;
+  $key = 'nor_writing_admin_notice_' . $post_id;
+
+  $existing = get_transient($key);
+  $existing = is_string($existing) ? trim($existing) : '';
+  if ($existing === '') return;
+
+  $lines = preg_split("/\r\n|\r|\n/", $existing);
+  $lines = array_filter(array_map('trim', (array) $lines));
+
+  $filtered = [];
+  foreach ($lines as $l) {
+    if ($l === '') continue;
+    if ($keep_line($l)) $filtered[] = $l;
+  }
+
+  if (empty($filtered)) {
+    delete_transient($key);
+    return;
+  }
+
+  set_transient($key, implode("\n", $filtered), 5 * MINUTE_IN_SECONDS);
+}
+
+function nor_clear_writing_no_admin_notices(int $post_id): void {
+  nor_remove_writing_admin_notice_lines($post_id, function (string $line): bool {
+    // Remove ONLY writing-no related notices so they don't persist when the number changes.
+    return (strpos($line, '採番が') !== 0);
+  });
+}
+
+function nor_append_writing_admin_notice_for_user(string $line): void {
+  $uid = function_exists('get_current_user_id') ? (int) get_current_user_id() : 0;
+  if ($uid <= 0) return;
+
+  $key = 'nor_writing_admin_notice_user_' . $uid;
+
+  $existing = get_transient($key);
+  $existing = is_string($existing) ? trim($existing) : '';
+
+  $lines = [];
+  if ($existing !== '') {
+    $lines = preg_split("/\r\n|\r|\n/", $existing);
+    $lines = array_filter(array_map('trim', (array) $lines));
+  }
+
+  $line = trim($line);
+  if ($line === '') return;
+  if (!in_array($line, $lines, true)) {
+    $lines[] = $line;
+  }
+
+  if (empty($lines)) {
+    delete_transient($key);
+    return;
+  }
+
+  set_transient($key, implode("\n", $lines), 5 * MINUTE_IN_SECONDS);
+}
+
+function nor_get_submitted_writing_no(array $postarr): string {
+  // Classic editor / meta box submit
+  if (isset($_POST['nor_writing_no'])) {
+    return nor_normalize_writing_no(wp_unslash($_POST['nor_writing_no']));
+  }
+
+  // Block editor (REST) may pass meta via meta_input
+  if (isset($postarr['meta_input']) && is_array($postarr['meta_input']) && array_key_exists('nor_writing_no', $postarr['meta_input'])) {
+    return nor_normalize_writing_no($postarr['meta_input']['nor_writing_no']);
+  }
+
+  // Some paths may use `meta`.
+  if (isset($postarr['meta']) && is_array($postarr['meta']) && array_key_exists('nor_writing_no', $postarr['meta'])) {
+    return nor_normalize_writing_no($postarr['meta']['nor_writing_no']);
+  }
+
+  return '';
+}
+
+add_action('add_meta_boxes_post', function () {
+  // 0) 採番（必須・ユニーク）
+  add_meta_box(
+    'nor_writing_no',
+    '採番（必須）',
+    function (WP_Post $post) {
+      // Shared nonce for all Writings meta boxes
+      wp_nonce_field('nor_writing_meta_save', 'nor_writing_meta_nonce');
+
+      $writing_no = get_post_meta($post->ID, 'nor_writing_no', true);
+      $writing_no = is_string($writing_no) ? trim($writing_no) : '';
+
+      echo '<input name="nor_writing_no" id="nor_writing_no" type="text" inputmode="numeric" pattern="[0-9]*" class="regular-text" value="' . esc_attr($writing_no) . '" />';
+      echo '<p class="description" style="margin-top:6px;">カードの # 表示に使う連番です（数字のみ）。未入力では公開できません。既存と重複すると警告します。</p>';
+    },
+    'post',
+    'normal',
+    'high'
+  );
+
+  // 1) タグライン
+  add_meta_box(
+    'nor_writing_tagline',
+    'タグライン',
+    function (WP_Post $post) {
+      $tagline = get_post_meta($post->ID, 'nor_tagline', true);
+      $tagline = is_string($tagline) ? $tagline : '';
+
+      // Shared nonce for all Writings meta boxes
+      wp_nonce_field('nor_writing_meta_save', 'nor_writing_meta_nonce');
+
+      echo '<input name="nor_tagline" id="nor_tagline" type="text" class="regular-text" value="' . esc_attr($tagline) . '" />';
+      echo '<p class="description" style="margin-top:6px;">Writings個別のタグラインを入力します。タイトル下に表示されます。</p>';
+    },
+    'post',
+    'normal',
+    'default'
+  );
+
+  // 2) 説明（EN）
+  add_meta_box(
+    'nor_writing_summary_en',
+    '説明（EN）',
+    function (WP_Post $post) {
+      $summary_en = get_post_meta($post->ID, 'nor_summary_en', true);
+      $summary_en = is_string($summary_en) ? $summary_en : '';
+
+      // Shared nonce for all Writings meta boxes
+      wp_nonce_field('nor_writing_meta_save', 'nor_writing_meta_nonce');
+
+      echo '<textarea name="nor_summary_en" id="nor_summary_en" rows="4" style="width:100%">' . esc_textarea($summary_en) . '</textarea>';
+      echo '<p class="description" style="margin-top:6px;">説明（JA）は標準の抜粋を使用し、説明（EN）はカスタムフィールドで保存しています。</p>';
+    },
+    'post',
+    'normal',
+    'default'
+  );
+
+  // 3) 本文英語要約
+  add_meta_box(
+    'nor_writing_body_summary_en',
+    '本文英語要約',
+    function (WP_Post $post) {
+      $body_summary_en = get_post_meta($post->ID, 'nor_writing_body_summary_en', true);
+      $body_summary_en = is_string($body_summary_en) ? $body_summary_en : '';
+
+      // Shared nonce for all Writings meta boxes
+      wp_nonce_field('nor_writing_meta_save', 'nor_writing_meta_nonce');
+
+      echo '<textarea name="nor_writing_body_summary_en" id="nor_writing_body_summary_en" rows="8" style="width:100%">' . esc_textarea($body_summary_en) . '</textarea>';
+      echo '<p class="description" style="margin-top:6px;">Writings詳細ページの本文末尾に表示する English Summary（複数段落可）です。SEO description用の説明（EN）とは別物です。</p>';
+    },
+    'post',
+    'normal',
+    'default'
+  );
+});
+
+add_action('save_post_post', function ($post_id) {
+  if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+  if (wp_is_post_revision($post_id)) return;
+  if (!current_user_can('edit_post', $post_id)) return;
+
+  if (!isset($_POST['nor_writing_meta_nonce']) || !wp_verify_nonce($_POST['nor_writing_meta_nonce'], 'nor_writing_meta_save')) return;
+
+  // If wp_insert_post_data stored user-scoped notices (new post has no ID yet),
+  // migrate them to this post-scoped notice so they appear on the edit screen.
+  $uid = function_exists('get_current_user_id') ? (int) get_current_user_id() : 0;
+  if ($uid > 0) {
+    $user_key = 'nor_writing_admin_notice_user_' . $uid;
+    $user_msg = get_transient($user_key);
+    if (is_string($user_msg) && trim($user_msg) !== '') {
+      $lines = preg_split("/\r\n|\r|\n/", (string) $user_msg);
+      $lines = array_filter(array_map('trim', (array) $lines));
+      foreach ($lines as $l) {
+        nor_append_writing_admin_notice((int) $post_id, (string) $l);
+      }
+      delete_transient($user_key);
+    }
+  }
+
+  // Writing no (required, unique) - store as normalized integer string
+  if (isset($_POST['nor_writing_no'])) {
+    $raw = wp_unslash($_POST['nor_writing_no']);
+    $val = nor_normalize_writing_no($raw);
+
+    if ($val === '') {
+      delete_post_meta($post_id, 'nor_writing_no');
+    } else {
+      update_post_meta($post_id, 'nor_writing_no', $val);
+    }
+  }
+
+  // Tagline
+  if (isset($_POST['nor_tagline'])) {
+    $raw = wp_unslash($_POST['nor_tagline']);
+    $val = sanitize_text_field($raw);
+    $val = trim($val);
+    if ($val === '') {
+      delete_post_meta($post_id, 'nor_tagline');
+    } else {
+      update_post_meta($post_id, 'nor_tagline', $val);
+    }
+  }
+
+  // Summary (EN)
+  if (isset($_POST['nor_summary_en'])) {
+    $raw = wp_unslash($_POST['nor_summary_en']);
+    $val = wp_kses_post($raw);
+    $val = trim($val);
+    if ($val === '') {
+      delete_post_meta($post_id, 'nor_summary_en');
+    } else {
+      update_post_meta($post_id, 'nor_summary_en', $val);
+    }
+  }
+
+  // Body summary (EN)
+  if (isset($_POST['nor_writing_body_summary_en'])) {
+    $raw = wp_unslash($_POST['nor_writing_body_summary_en']);
+    $val = wp_kses_post($raw);
+    $val = trim($val);
+    if ($val === '') {
+      delete_post_meta($post_id, 'nor_writing_body_summary_en');
+    } else {
+      update_post_meta($post_id, 'nor_writing_body_summary_en', $val);
+    }
+  }
+});
+
+/**
+ * Admin: Writings (post) hard validation (required / unique fields)
+ * - If required fields are missing or duplicate, force status to draft and show an error notice.
+ *
+ * Rules (hard-stop):
+ * - Writing No (nor_writing_no) is required and must be unique
+ *
+ * NOTE: Unlike Works, Title is intentionally NOT hard-required here (out of this round's scope).
+ */
+add_filter('wp_insert_post_data', function ($data, $postarr) {
+  // Run for admin saves including block editor (REST). Skip only ajax-like contexts.
+  if (!is_admin() || wp_doing_ajax()) return $data;
+  if (!isset($data['post_type']) || $data['post_type'] !== 'post') return $data;
+
+  // Allow trash/delete actions to proceed without validation.
+  $next_status = isset($data['post_status']) ? (string) $data['post_status'] : '';
+  $req_action  = isset($_REQUEST['action']) ? (string) $_REQUEST['action'] : '';
+  $req_action2 = isset($_REQUEST['action2']) ? (string) $_REQUEST['action2'] : '';
+
+  if (
+    $next_status === 'trash' ||
+    in_array($req_action, ['trash', 'delete', 'bulk-trash', 'bulk-delete', 'untrash'], true) ||
+    in_array($req_action2, ['trash', 'delete', 'bulk-trash', 'bulk-delete', 'untrash'], true)
+  ) {
+    return $data;
+  }
+
+  /**
+   * Skip validation for auto-draft.
+   * Opening "Add New" creates an auto-draft internally.
+   * We must not warn/block on that initial auto-draft creation.
+   */
+  if ($next_status === 'auto-draft') {
+    return $data;
+  }
+
+  $pid = isset($postarr['ID']) ? (int) $postarr['ID'] : 0;
+
+  // Clear stale writing-no notices before re-validating (otherwise old duplicate messages remain).
+  if ($pid > 0) {
+    nor_clear_writing_no_admin_notices($pid);
+  }
+
+  // Collect hard-stop errors so we can show multiple notices at once.
+  $hard_errors = [];
+
+  // Writing No: required + unique (supports classic + block editor)
+  $writing_no = nor_get_submitted_writing_no((array) $postarr);
+
+  if ($writing_no === '') {
+    // If the field wasn't in the submission (some editor flows), fall back to stored meta.
+    if ($pid > 0) {
+      $stored = get_post_meta($pid, 'nor_writing_no', true);
+      $stored = nor_normalize_writing_no($stored);
+      if ($stored !== '') {
+        $writing_no = $stored;
+      }
+    }
+  }
+
+  if ($writing_no === '') {
+    // Make the reason explicit: we saved as draft because writing-no is required.
+    $hard_errors[] = '採番が未入力のため、公開せず下書きとして保存しました。';
+  } else {
+    $dup_id = nor_find_writing_id_by_writing_no($writing_no, $pid);
+    if ($dup_id > 0) {
+      $hard_errors[] = '採番が「記事ID: ' . $dup_id . '」と重複しているため、公開せず下書きとして保存しました。';
+    }
+  }
+
+  // If any hard-stop errors exist, force draft and attach all notices.
+  if (!empty($hard_errors)) {
+    $data['post_status'] = 'draft';
+
+    foreach ($hard_errors as $msg) {
+      if ($pid > 0) {
+        nor_append_writing_admin_notice($pid, (string) $msg);
+      } else {
+        nor_append_writing_admin_notice_for_user((string) $msg);
+      }
+    }
+
+    return $data;
+  }
+
+  return $data;
+}, 10, 2);
+
+add_action('admin_notices', function () {
+  $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+  if (!$screen) return;
+  if (($screen->post_type ?? '') !== 'post') return;
+  if (!in_array((string) ($screen->base ?? ''), ['post', 'post-new'], true)) return;
+
+  $post_id = isset($_GET['post']) ? (int) $_GET['post'] : 0;
+  if ($post_id <= 0) {
+    // New post screen: show user-scoped notices (no post ID yet)
+    $uid = function_exists('get_current_user_id') ? (int) get_current_user_id() : 0;
+    if ($uid <= 0) return;
+
+    $user_key = 'nor_writing_admin_notice_user_' . $uid;
+    $msg = get_transient($user_key);
+    if (!is_string($msg) || trim($msg) === '') return;
+
+    $lines = preg_split("/\r\n|\r|\n/", (string) $msg);
+    $lines = array_filter(array_map('trim', (array) $lines));
+
+    echo '<div class="notice notice-warning is-dismissible">';
+    if (count($lines) <= 1) {
+      echo '<p>' . esc_html($msg) . '</p>';
+    } else {
+      echo '<ul style="margin:0.5em 0 0.5em 1.2em; list-style:disc;">';
+      foreach ($lines as $l) {
+        echo '<li>' . esc_html($l) . '</li>';
+      }
+      echo '</ul>';
+    }
+    echo '</div>';
+    // One-shot notice
+    delete_transient($user_key);
+    return;
+  }
+
+  $msg = get_transient('nor_writing_admin_notice_' . $post_id);
+  if (!is_string($msg) || trim($msg) === '') return;
+
+  $lines = preg_split("/\r\n|\r|\n/", (string) $msg);
+  $lines = array_filter(array_map('trim', (array) $lines));
+
+  echo '<div class="notice notice-warning is-dismissible">';
+  if (count($lines) <= 1) {
+    echo '<p>' . esc_html($msg) . '</p>';
+  } else {
+    echo '<ul style="margin:0.5em 0 0.5em 1.2em; list-style:disc;">';
+    foreach ($lines as $l) {
+      echo '<li>' . esc_html($l) . '</li>';
+    }
+    echo '</ul>';
+  }
+  echo '</div>';
+  // One-shot notices (prevents stale/accumulating messages across saves)
+  delete_transient('nor_writing_admin_notice_' . $post_id);
+});
+
+/**
+ * ========================================
+ * Writings (post) & Pages (page) — Classic Editor (Block Editor disabled)
+ * ========================================
+ * Works never declares 'editor' support in register_post_type('works', ...)
+ * above, so use_block_editor_for_post_type() already returns false for it
+ * automatically (WordPress core requires 'editor' support before it will ever
+ * use the block editor) — Works simply has no body-content editor at all,
+ * classic or block, which is why its edit screen is already "classic".
+ *
+ * Writings and Pages both need a real body editor (post_content), so that same
+ * "just omit editor support" trick would remove the editor entirely, which is
+ * not what we want here. Instead we use the officially documented
+ * use_block_editor_for_post_type filter to keep the classic TinyMCE editor
+ * while turning off the block editor, for 'post' and 'page' only. nør. runs a
+ * CMS-style admin (theme-driven page structure, meta boxes for tagline/copy/
+ * SEO-LLMO/etc.), so every editable post type is now the same classic, vertical
+ * meta-box UI.
+ *
+ * show_in_rest and register_post_meta are left untouched: the REST API stays
+ * available for both post types, only the block-editor UI is turned off.
+ */
+add_filter('use_block_editor_for_post_type', function ($use_block_editor, $post_type) {
+  if (in_array($post_type, ['post', 'page'], true)) return false;
+  return $use_block_editor;
+}, 10, 2);

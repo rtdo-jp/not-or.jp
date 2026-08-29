@@ -15,7 +15,7 @@
     $content_ctx = nor_get_content_page_hero_context((int) $page_id, [
       'title_fallback' => 'About',
       'section_h2_fallback' => '—',
-      'unit' => 'works archived.',
+      'unit' => nor_format_count_unit(nor_get_published_works_count(), 'work', 'works', 'archived'),
       'widget' => 'none',
     ]);
     $title = (string) ($content_ctx['title'] ?? 'About');
@@ -33,7 +33,7 @@
 
     $hero_args = is_array($content_ctx['hero_args'] ?? null) ? $content_ctx['hero_args'] : [
       'count' => nor_get_published_works_count(),
-      'unit' => 'works archived.',
+      'unit' => nor_format_count_unit(nor_get_published_works_count(), 'work', 'works', 'archived'),
       'title' => $title,
       'tagline' => $tagline,
       'desc_ja' => $desc_ja,
@@ -42,7 +42,7 @@
       'breadcrumbs' => nor_build_single_breadcrumb($title),
     ];
     $hero_args['count'] = $works_count;
-    $hero_args['unit'] = 'works archived.';
+    $hero_args['unit'] = nor_format_count_unit($works_count, 'work', 'works', 'archived');
     $hero_args['tagline_fallback'] = '—';
     $hero_args['desc_fallback'] = '—';
 
