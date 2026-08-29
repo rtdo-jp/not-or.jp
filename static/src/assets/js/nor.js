@@ -292,6 +292,11 @@ const NorShared = (() => {
   const applyThemeAttr = (theme) => {
     if (theme === THEME_DARK) root.setAttribute(ATTR_THEME, THEME_DARK);
     else root.setAttribute(ATTR_THEME, THEME_LIGHT);
+
+    // The inline background-color set in <head> only guards against a flash
+    // before CSS loads. Once JS owns data-theme, drop it so html[data-theme]
+    // stays in sync on later mode switches instead of freezing at page-load's color.
+    root.style.removeProperty("background-color");
   };
 
   const ensureLabelSpan = (btn) => {
@@ -1023,33 +1028,30 @@ const NorShared = (() => {
 })();
 
 // ========================================
-// Skeleton
+// Skeleton (Works detail only / lightweight)
 // ========================================
 (() => {
-  const SELECTOR_WORKS_CONTENT = ".content-works";
-  const SELECTOR_WORKS_CARD_IMG_A = "article.card figure img";
-  const SELECTOR_WORKS_CARD_IMG_B = ".card.article figure img";
-  const SELECTOR_FIGURE = "figure";
+  const SELECTOR_WORKS_CONTENT = ".content-works, .content-writings";
+  const SELECTOR_FIGURE = "figure.skeleton-figure";
   const SELECTOR_IMG = "img";
-  const SELECTOR_SKELETON_LAYER = ":scope > .skeleton";
   const CLASS_SKELETON = "skeleton";
   const CLASS_SKELETON_LOADER = "skeleton-loader";
   const CLASS_IS_SKELETON = "is-skeleton";
   const CLASS_IS_LOADED = "is-loaded";
   const ATTR_NOR_SKELETON_REL = "data-nor-skeleton-rel";
   const ATTR_NOR_SKELETON_HIDE = "data-nor-skeleton-hide";
-  const ATTR_NOR_SKELETON_SYNC = "data-nor-skeleton-sync";
-  const ATTR_NOR_SKELETON = "data-nor-skeleton";
   const ATTR_NOR_FIGURE_SKELETON = "data-nor-figure-skeleton";
+  const ATTR_NOR_SKELETON = "data-nor-skeleton";
   const ATTR_SKELETON = "data-skeleton";
   const ATTR_SKELETON_ANIM = "data-skeleton-anim";
 
   const ANIM_KEYS = ["bars-1", "bars-2", "bars-3", "bars-4", "bars-5", "bars-6"];
-
   const prefersReduced = NorShared.getPrefersReducedMotion();
   const { qs, qsa } = NorShared;
-  let pageAnimKey = "bars-1";
-  let pageAnimId = "1";
+  const worksContentEl = qs(SELECTOR_WORKS_CONTENT);
+
+  // Skip the whole skeleton module on non-works-detail pages.
+  if (!worksContentEl) return;
 
   const getPageAnimKey = () => {
     const seqKey = "nor.skeleton.anim.seq.v1";
@@ -1075,20 +1077,12 @@ const NorShared = (() => {
     return m ? m[1] : "1";
   };
 
-  const isWorksDetail = () => {
-    if (qs(SELECTOR_WORKS_CONTENT)) return true;
-
-    const body = document.body;
-    if (!body) return false;
-
-    if (body.classList.contains("pages")) {
-      if (qs(SELECTOR_WORKS_CARD_IMG_A) || qs(SELECTOR_WORKS_CARD_IMG_B)) return true;
-    }
-
-    return false;
-  };
-
   const isImgLoaded = (img) => Boolean(img && img.complete && img.naturalWidth > 0);
+  const shouldUseDecode = (img) => {
+    if (prefersReduced || typeof img?.decode !== "function") return false;
+    const loadingHint = String(img.getAttribute("loading") || img.loading || "").toLowerCase();
+    return loadingHint !== "lazy";
+  };
 
   const ensureRelative = (el) => {
     if (!el || !(el instanceof HTMLElement)) return;
@@ -1127,9 +1121,6 @@ const NorShared = (() => {
     img.removeAttribute(ATTR_NOR_SKELETON_HIDE);
   };
 
-  const _skRafMap = new WeakMap();
-  const _skCleanupMap = new WeakMap();
-
   const syncSkeletonBox = (figure, sk, img) => {
     if (!figure || !sk || !img) return;
 
@@ -1147,54 +1138,24 @@ const NorShared = (() => {
     sk.style.height = `${height}px`;
   };
 
-  const bindSkeletonBoxSync = (figure, sk, img) => {
-    if (!figure || !sk || !img) return;
-    if (sk.getAttribute(ATTR_NOR_SKELETON_SYNC) === "1") return;
-
-    const requestSync = () => {
-      const prev = _skRafMap.get(sk) || 0;
-      if (prev) return;
-
-      const id = requestAnimationFrame(() => {
-        _skRafMap.delete(sk);
-        syncSkeletonBox(figure, sk, img);
-      });
-
-      _skRafMap.set(sk, id);
-    };
-
-    requestSync();
-
-    window.addEventListener("resize", requestSync);
-    window.addEventListener("orientationchange", requestSync);
-
-    img.addEventListener("load", requestSync, { once: true });
-    img.addEventListener("error", requestSync, { once: true });
-
-    _skCleanupMap.set(sk, () => {
-      window.removeEventListener("resize", requestSync);
-      window.removeEventListener("orientationchange", requestSync);
-
-      const raf = _skRafMap.get(sk) || 0;
-      if (raf) {
-        cancelAnimationFrame(raf);
-        _skRafMap.delete(sk);
+  const getDirectSkeleton = (figure) => {
+    if (!figure) return null;
+    for (const node of Array.from(figure.children)) {
+      if (node instanceof HTMLElement && node.classList.contains(CLASS_SKELETON)) {
+        return node;
       }
-
-      _skCleanupMap.delete(sk);
-    });
-
-    sk.setAttribute(ATTR_NOR_SKELETON_SYNC, "1");
+    }
+    return null;
   };
 
-  const mountSkeletonLayer = (figure, img) => {
-    if (!figure) return null;
+  const mountSkeletonLayer = (figure, img, pageAnimId, pageAnimKey) => {
+    if (!figure || !img) return null;
 
-    const existing = figure.querySelector(SELECTOR_SKELETON_LAYER);
+    const existing = getDirectSkeleton(figure);
     if (existing) {
       existing.setAttribute(ATTR_SKELETON, pageAnimId);
       existing.setAttribute(ATTR_SKELETON_ANIM, pageAnimKey);
-      if (img) bindSkeletonBoxSync(figure, existing, img);
+      syncSkeletonBox(figure, existing, img);
       return existing;
     }
 
@@ -1222,26 +1183,20 @@ const NorShared = (() => {
     sk.style.height = "0";
 
     figure.appendChild(sk);
-
-    if (img) bindSkeletonBoxSync(figure, sk, img);
+    syncSkeletonBox(figure, sk, img);
+    requestAnimationFrame(() => syncSkeletonBox(figure, sk, img));
 
     return sk;
   };
 
   const unmountSkeletonLayer = (figure) => {
     if (!figure) return;
-    const sk = figure.querySelector(SELECTOR_SKELETON_LAYER);
-
-    if (sk) {
-      const cleanup = _skCleanupMap.get(sk);
-      if (cleanup) cleanup();
-      sk.remove();
-    }
-
+    const sk = getDirectSkeleton(figure);
+    if (sk) sk.remove();
     restoreRelative(figure);
   };
 
-  const applySkeletonToFigure = (figure) => {
+  const applySkeletonToFigure = (figure, pageAnimId, pageAnimKey) => {
     if (!figure) return;
     if (figure.getAttribute(ATTR_NOR_FIGURE_SKELETON) === "1") return;
 
@@ -1258,13 +1213,12 @@ const NorShared = (() => {
     figure.setAttribute(ATTR_NOR_FIGURE_SKELETON, "1");
     figure.setAttribute(ATTR_SKELETON, pageAnimId);
 
-    mountSkeletonLayer(figure, img);
+    mountSkeletonLayer(figure, img, pageAnimId, pageAnimKey);
     hideImgForSkeleton(img);
 
     const markLoaded = () => {
       figure.classList.remove(CLASS_IS_SKELETON);
       figure.classList.add(CLASS_IS_LOADED);
-
       figure.removeAttribute(ATTR_SKELETON);
 
       unmountSkeletonLayer(figure);
@@ -1280,7 +1234,7 @@ const NorShared = (() => {
     img.addEventListener("load", done, { once: true });
     img.addEventListener("error", done, { once: true });
 
-    if (!prefersReduced && typeof img.decode === "function") {
+    if (shouldUseDecode(img)) {
       img
         .decode()
         .then(() => {
@@ -1291,66 +1245,19 @@ const NorShared = (() => {
     }
   };
 
-  const run = () => {
-    const figures = qsa(SELECTOR_FIGURE).filter((f) => Boolean(f.querySelector(SELECTOR_IMG)));
+  const run = (pageAnimId, pageAnimKey) => {
+    const figures = qsa(SELECTOR_FIGURE, worksContentEl).filter((f) => Boolean(f.querySelector(SELECTOR_IMG)));
     if (figures.length === 0) return;
-    figures.forEach(applySkeletonToFigure);
-  };
 
-  const mountObserver = () => {
-    if (!("MutationObserver" in window)) return;
-
-    const root = qs(SELECTOR_WORKS_CONTENT) || document.body;
-    if (!root) return;
-
-    const mo = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        if (!m.addedNodes || m.addedNodes.length === 0) continue;
-
-        for (const n of Array.from(m.addedNodes)) {
-          if (!(n instanceof HTMLElement)) continue;
-
-          if (n.tagName && n.tagName.toLowerCase() === SELECTOR_FIGURE) {
-            applySkeletonToFigure(n);
-            continue;
-          }
-
-          const figs = qsa(SELECTOR_FIGURE, n).filter((f) => Boolean(f.querySelector(SELECTOR_IMG)));
-          if (figs.length) figs.forEach(applySkeletonToFigure);
-        }
-      }
-    });
-
-    mo.observe(root, { childList: true, subtree: true });
-
-    NorShared.onPageHide(
-      () => {
-        try {
-          mo.disconnect();
-        } catch {
-        }
-      },
-      { once: true }
-    );
-  };
-
-  const boot = () => {
-    run();
-    mountObserver();
-  };
-
-  const bind = () => {
-    NorShared.onDomReady(boot);
-    NorShared.onPageShow(() => {
-      run();
-    });
+    figures.forEach((figure) => applySkeletonToFigure(figure, pageAnimId, pageAnimKey));
   };
 
   const init = () => {
-    pageAnimKey = getPageAnimKey();
-    pageAnimId = getPageAnimId(pageAnimKey);
-    if (!isWorksDetail()) return;
-    bind();
+    const pageAnimKey = getPageAnimKey();
+    const pageAnimId = getPageAnimId(pageAnimKey);
+
+    NorShared.onDomReady(() => run(pageAnimId, pageAnimKey));
+    NorShared.onPageShow(() => run(pageAnimId, pageAnimKey));
   };
 
   init();
@@ -1429,14 +1336,8 @@ const NorShared = (() => {
     const raw = String(value || "").trim();
     if (!raw) return false;
 
-    const withScheme = /^https?:\/\//i.test(raw)
-      ? raw
-      : raw.includes(".")
-        ? `https://${raw}`
-        : raw;
-
     try {
-      const u = new URL(withScheme);
+      const u = new URL(raw);
       return u.protocol === "http:" || u.protocol === "https:";
     } catch {
       return false;
@@ -2009,8 +1910,10 @@ const NorShared = (() => {
       2: [
         "1", "3", "4", "6", "7", "B", "D", "E", "F", "H", "J", "K",
         "L", "M", "N", "P", "R", "S", "U", "V", "W", "Y", "Z",
+        "ア", "ニ", "資"
       ],
       3: ["0", "2", "5", "8", "9", "C", "G", "O", "Q", "T"],
+      5: ["ビ"],
     };
   })();
 
@@ -2386,6 +2289,65 @@ const NorShared = (() => {
     }, Math.max(0, Number(HOLD_MS) || 160));
 
     bind(cleanup);
+  };
+
+  init();
+})();
+
+// ========================================
+// Overscroll top / bottom (prototype)
+// ========================================
+(() => {
+  // Kept equal to --motion-duration-s so the CSS fade-back and the class
+  // removal land together.
+  const RELEASE_DELAY_MS = 180;
+  const CLASS_OVERSCROLLING_TOP = "is-overscrolling-top";
+  const CLASS_OVERSCROLLING_BOTTOM = "is-overscrolling-bottom";
+
+  const root = document.documentElement;
+  let releaseTimer = 0;
+  let bottomReleaseTimer = 0;
+
+  const release = () => {
+    releaseTimer = 0;
+    root.classList.remove(CLASS_OVERSCROLLING_TOP);
+  };
+
+  const releaseBottom = () => {
+    bottomReleaseTimer = 0;
+    root.classList.remove(CLASS_OVERSCROLLING_BOTTOM);
+  };
+
+  // Sub-pixel/rounding differences mean scrollY + innerHeight rarely lands
+  // on scrollHeight exactly, so allow a small tolerance instead of requiring
+  // an exact match (same reasoning as the top check's scrollY <= 0).
+  const isAtBottom = () =>
+    window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
+
+  const onWheel = (e) => {
+    // scrollY can already read slightly negative mid-bounce on macOS Chrome,
+    // so treat "at or past the top" as the trigger rather than an exact 0.
+    if (window.scrollY <= 0 && e.deltaY < 0) {
+      root.classList.add(CLASS_OVERSCROLLING_TOP);
+
+      clearTimeout(releaseTimer);
+      releaseTimer = window.setTimeout(release, RELEASE_DELAY_MS);
+    }
+
+    if (e.deltaY > 0 && isAtBottom()) {
+      root.classList.add(CLASS_OVERSCROLLING_BOTTOM);
+
+      clearTimeout(bottomReleaseTimer);
+      bottomReleaseTimer = window.setTimeout(releaseBottom, RELEASE_DELAY_MS);
+    }
+  };
+
+  const bind = () => {
+    window.addEventListener("wheel", onWheel, { passive: true });
+  };
+
+  const init = () => {
+    bind();
   };
 
   init();

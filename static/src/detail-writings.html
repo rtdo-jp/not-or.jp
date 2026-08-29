@@ -2,26 +2,26 @@
 <html lang="ja" class="no-js" data-theme="light">
 <head>
 <meta charset="utf-8">
-<title>{WORK_TITLE} | Works | nør. Ryousuke Tamura Design Office</title>
-<meta name="description" content="{WORK_SUMMARY_JA} | {WORK_SUMMARY_EN}">
+<title>{WRITING_TITLE} | Writings | nør. Ryousuke Tamura Design Office</title>
+<meta name="description" content="{WRITING_SUMMARY_JA} | {WRITING_SUMMARY_EN}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="format-detection" content="telephone=no">
 <meta name="color-scheme" content="light dark">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-<link rel="canonical" href="https://not-or.jp/works/{WORK_ID}/">
+<link rel="canonical" href="https://not-or.jp/writings/{WRITING_SLUG}/">
 
-<meta property="og:url" content="https://not-or.jp/works/{WORK_ID}/">
+<meta property="og:url" content="https://not-or.jp/writings/{WRITING_SLUG}/">
 <meta property="og:type" content="article">
-<meta property="og:title" content="{WORK_TITLE} | Works | nør.">
-<meta property="og:description" content="{WORK_SUMMARY_JA} | {WORK_SUMMARY_EN}">
+<meta property="og:title" content="{WRITING_TITLE} | Writings | nør.">
+<meta property="og:description" content="{WRITING_SUMMARY_JA} | {WRITING_SUMMARY_EN}">
 <meta property="og:site_name" content="nør.">
-<meta property="og:image" content="https://not-or.jp/assets/img/works/{WORK_ID}/main.png">
+<meta property="og:image" content="{WRITING_OG_IMAGE}">
 <meta property="og:locale" content="ja_JP">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@not-or">
-<meta name="twitter:title" content="{WORK_TITLE} | Works | nør.">
-<meta name="twitter:description" content="{WORK_SUMMARY_JA} | {WORK_SUMMARY_EN}">
-<meta name="twitter:image" content="https://not-or.jp/assets/img/works/{WORK_ID}/main.png">
+<meta name="twitter:title" content="{WRITING_TITLE} | Writings | nør.">
+<meta name="twitter:description" content="{WRITING_SUMMARY_JA} | {WRITING_SUMMARY_EN}">
+<meta name="twitter:image" content="{WRITING_OG_IMAGE}">
 
 <link rel="icon" type="image/svg+xml" href="./assets/img/favicon.svg">
 <link rel="icon" sizes="any" href="./assets/img/favicon.ico">
@@ -100,54 +100,55 @@
 
     {
       "@type": "ImageObject",
-      "@id": "https://not-or.jp/works/{WORK_ID}/#primaryimage",
-      "url": "https://not-or.jp/assets/img/works/{WORK_ID}/main.png"
+      "@id": "https://not-or.jp/writings/{WRITING_SLUG}/#primaryimage",
+      "url": "{WRITING_OG_IMAGE}"
     },
 
     {
       "@type": "WebPage",
-      "@id": "https://not-or.jp/works/{WORK_ID}/#webpage",
-      "url": "https://not-or.jp/works/{WORK_ID}/",
-      "name": "{WORK_TITLE} | Works | nør. Ryousuke Tamura Design Office",
+      "@id": "https://not-or.jp/writings/{WRITING_SLUG}/#webpage",
+      "url": "https://not-or.jp/writings/{WRITING_SLUG}/",
+      "name": "{WRITING_TITLE} | Writings | nør. Ryousuke Tamura Design Office",
       "description": [
-        { "@value": "{WORK_SUMMARY_JA}", "@language": "ja" },
-        { "@value": "{WORK_SUMMARY_EN}", "@language": "en" }
+        { "@value": "{WRITING_SUMMARY_JA}", "@language": "ja" },
+        { "@value": "{WRITING_SUMMARY_EN}", "@language": "en" }
       ],
       "inLanguage": ["ja", "en"],
       "isPartOf": { "@id": "https://not-or.jp/#website" },
       "about": { "@id": "https://not-or.jp/#organization" },
       "publisher": { "@id": "https://not-or.jp/#organization" },
-      "primaryImageOfPage": { "@id": "https://not-or.jp/works/{WORK_ID}/#primaryimage" },
-      "breadcrumb": { "@id": "https://not-or.jp/works/{WORK_ID}/#breadcrumb" },
-      "mainEntity": { "@id": "https://not-or.jp/works/{WORK_ID}/#work" }
+      "primaryImageOfPage": { "@id": "https://not-or.jp/writings/{WRITING_SLUG}/#primaryimage" },
+      "breadcrumb": { "@id": "https://not-or.jp/writings/{WRITING_SLUG}/#breadcrumb" },
+      "mainEntity": { "@id": "https://not-or.jp/writings/{WRITING_SLUG}/#article" }
     },
 
     {
-      "@type": "CreativeWork",
-      "@id": "https://not-or.jp/works/{WORK_ID}/#work",
-      "url": "https://not-or.jp/works/{WORK_ID}/",
-      "name": "{WORK_TITLE}",
+      "@type": "Article",
+      "@id": "https://not-or.jp/writings/{WRITING_SLUG}/#article",
+      "url": "https://not-or.jp/writings/{WRITING_SLUG}/",
+      "headline": "{WRITING_TITLE}",
+      "name": "{WRITING_TITLE}",
       "description": [
-        { "@value": "{WORK_SUMMARY_JA}", "@language": "ja" },
-        { "@value": "{WORK_SUMMARY_EN}", "@language": "en" }
+        { "@value": "{WRITING_SUMMARY_JA}", "@language": "ja" },
+        { "@value": "{WRITING_SUMMARY_EN}", "@language": "en" }
       ],
-      "image": "https://not-or.jp/assets/img/works/{WORK_ID}/main.png",
+      "image": "{WRITING_OG_IMAGE}",
       "datePublished": "{PUBLISH_DATE}",
       "dateModified": "{UPDATE_DATE}",
-      "creator": { "@id": "https://not-or.jp/#organization" },
+      "author": { "@id": "https://not-or.jp/#person" },
       "publisher": { "@id": "https://not-or.jp/#organization" },
       "inLanguage": ["ja", "en"],
       "isPartOf": { "@id": "https://not-or.jp/#website" },
-      "mainEntityOfPage": { "@id": "https://not-or.jp/works/{WORK_ID}/#webpage" }
+      "mainEntityOfPage": { "@id": "https://not-or.jp/writings/{WRITING_SLUG}/#webpage" }
     },
 
     {
       "@type": "BreadcrumbList",
-      "@id": "https://not-or.jp/works/{WORK_ID}/#breadcrumb",
+      "@id": "https://not-or.jp/writings/{WRITING_SLUG}/#breadcrumb",
       "itemListElement": [
         { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://not-or.jp/" },
-        { "@type": "ListItem", "position": 2, "name": "Works", "item": "https://not-or.jp/works/" },
-        { "@type": "ListItem", "position": 3, "name": "{WORK_TITLE}", "item": "https://not-or.jp/works/{WORK_ID}/" }
+        { "@type": "ListItem", "position": 2, "name": "Writings", "item": "https://not-or.jp/writings/" },
+        { "@type": "ListItem", "position": 3, "name": "{WRITING_TITLE}", "item": "https://not-or.jp/writings/{WRITING_SLUG}/" }
       ]
     },
 
@@ -186,7 +187,7 @@
       </ul>
       <ul class="nav-list">
         <li><a href="/about/">About</a></li>
-        <li><a href="/writings/">Writings</a></li>
+        <li><a href="/writings/" aria-current="page">Writings</a></li>
         <li><a href="/policies/">Policies</a></li>
         <li><a href="/notes/">Notes</a></li>
         <li><a href="/faqs/">FAQs</a></li>
@@ -210,135 +211,109 @@
           <p class="author">nør.</p>
         </div>
         <div class="stats">
-          <p class="pair"><data class="count" value="521">521</data><span class="unit">works archived.</span></p>
+          <p class="pair"><data class="count" value="13">13</data><span class="unit">Writings published.</span></p>
           <p class="permission">Visuals appear only <br>with client permission. <br>Otherwise, entries remain <br>as <strong>text — never lost</strong>.</p>
         </div>
       </div>
       <div class="localize">
         <hgroup class="specific">
-          <h1><cite>{WORK_TITLE}</cite></h1>
-          <p class="tagline">{WORK_TAGLINE}</p>
+          <h1><cite>{WRITING_TITLE}</cite></h1>
+          <p class="tagline">{WRITING_TAGLINE}</p>
         </hgroup>
         <div class="textpair">
-          <p class="ja" lang="ja">{WORK_SUMMARY_JA}</p>
-          <p class="en" lang="en">{WORK_SUMMARY_EN}</p>
+          <p class="ja" lang="ja">{WRITING_SUMMARY_JA}</p>
+          <p class="en" lang="en">{WRITING_SUMMARY_EN}</p>
         </div>
       </div>
     </div>
     <nav class="breadcrumbs" aria-label="Breadcrumb">
       <ol>
         <li><a href="/">Home</a></li>
-        <li><a href="/works/">Works</a></li>
-        <li><span aria-current="page"><cite>{WORK_TITLE}</cite></span></li>
+        <li><a href="/writings/">Writings</a></li>
+        <li><span aria-current="page"><cite>{WRITING_TITLE}</cite></span></li>
       </ol>
     </nav>
   </section>
 
-  <section class="section content-works">
-    <h2 class="visually-hidden"><span lang="ja">制作記録</span>（<span lang="en">Work details</span>）</h2>
+  <section class="section content-writings">
+    <h2 class="visually-hidden"><span lang="ja">記事詳細</span>（<span lang="en">Writing details</span>）</h2>
     <div class="inner">
 
       <!-- card-article -->
-      <article class="card article">
-        <h3 class="visually-hidden">Work entry</h3>
+      <article class="card article writing">
+        <h3 class="visually-hidden">Writing entry</h3>
+
         <header class="head">
           <figure class="skeleton-figure">
-            <img src="assets/img/media-dummy-heavy.png" width="2720" height="1428" alt="{WORK_TITLE} の画像" fetchpriority="high">
-            <figcaption>
-              <p class="ja" lang="ja">{FIGURE_CAPTION_JA}</p>
-              <p class="en" lang="en">{FIGURE_CAPTION_EN}</p>
-            </figcaption>
+            <img src="assets/img/media-dummy.png" width="2720" height="1428" alt="{WRITING_TITLE} の画像" fetchpriority="high">
           </figure>
+          <dl class="meta">
+            <dt>Published</dt>
+            <dd><time datetime="2025-12-01" class="value">2025-12-01</time><span class="new"><small>New</small></span></dd>
+            <dt>Updated</dt>
+            <dd><time datetime="2025-12-01" class="value">2025-12-01</time></dd>
+            <dt>Theme</dt>
+            <dd><span class="value">{WRITING_THEME}</span></dd>
+          </dl>
         </header>
         <div class="body">
           <div class="detail">
-            <figure class="skeleton-figure">
-              <img src="assets/img/media-dummy.png" width="2720" height="1428" alt="{WORK_TITLE} の画像" loading="lazy" decoding="async">
-              <figcaption>
-                <p class="ja" lang="ja">{FIGURE_CAPTION_JA}</p>
-                <p class="en" lang="en">{FIGURE_CAPTION_EN}</p>
-              </figcaption>
-            </figure>
-            <figure class="skeleton-figure">
-              <img src="assets/img/media-dummy.png" width="2720" height="1428" alt="{WORK_TITLE} の画像" loading="lazy" decoding="async">
-              <figcaption>
-                <p class="ja" lang="ja">{FIGURE_CAPTION_JA}</p>
-                <p class="en" lang="en">{FIGURE_CAPTION_EN}</p>
-              </figcaption>
-            </figure>
-          </div>
-          <div class="aside">
-            <dl class="meta">
-              <dt>Published</dt>
-              <dd><time datetime="2025-12-01" class="value">2025-12-01</time><span class="new"><small>New</small></span></dd>
-              <dt>Updated</dt>
-              <dd><time datetime="2025-12-01" class="value">2025-12-01</time></dd>
-              <dt>Categories</dt>
-              <dd><span class="value"><a href="/">Categoriesカテゴリー</a></span></dd>
-              <dt>Content mode</dt>
-              <dd>Text-only</dd>
-            </dl>
-            <div class="types-roles-tools">
-              <dl class="types">
-                <dt>Document types</dt>
-                <dd>
+            <div class="writing-content ja" lang="ja">
+              <h4>本文はh4から本文はh4から本文はh4から本文はh4から本文はh4から</h4>
+              <p>テキストテキスト<strong>テキストテキスト</strong>テキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキスト</p>
+              <p>テキストテキスト<em>テキストテキスト</em>テキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキスト</p>
+              <ul>
+                <li>リスト項目1リスト項目1リスト項目1リスト項目1リスト項目1リスト項目1
                   <ul>
-                    <li><span class="value"><a href="/">TypesTypesタイプタイプ</a></span></li>
+                    <li>リスト項目1リスト項目1リスト項目1リスト項目1リスト項目1リスト項目1</li>
+                    <li>リスト項目1リスト項目1リスト項目1リスト項目1リスト項目1リスト項目1</li>
+                    <li>リスト項目1リスト項目1リスト項目1リスト項目1リスト項目1リスト項目1</li>
                   </ul>
-                </dd>
-              </dl>
-              <div class="roles-tools">
-                <dl class="roles">
-                  <dt>Roles</dt>
-                  <dd>
-                    <ul>
-                      <li><span class="value"><a href="/">RolesRoles役割役割</a></span></li>
-                      <li><span class="value"><a href="/">RolesRoles役割役割</a></span></li>
-                      <li><span class="value"><a href="/">RolesRoles役割役割</a></span></li>
-                      <li><span class="value"><a href="/">RolesRoles役割役割</a></span></li>
-                    </ul>
-                  </dd>
-                </dl>
-                <dl class="tools">
-                  <dt>Tools</dt>
-                  <dd>
-                    <ul>
-                      <li><span class="value"><a href="/">ToolsToolsツールツール</a></span></li>
-                      <li><span class="value"><a href="/">ToolsToolsツールツール</a></span></li>
-                      <li><span class="value"><a href="/">ToolsToolsツールツール</a></span></li>
-                    </ul>
-                  </dd>
-                </dl>
-              </div>
+                </li>
+                <li>リスト項目2リスト項目2リスト項目2リスト項目2リスト項目2リスト項目2リスト項目2リスト項目2リスト項目2</li>
+                <li>リスト項目3</li>
+              </ul>
+              <ol>
+                <li>リスト項目1リスト項目1リスト項目1リスト項目1リスト項目1リスト項目1</li>
+                <li>リスト項目2リスト項目2リスト項目2リスト項目2リスト項目2リスト項目2リスト項目2リスト項目2リスト項目2</li>
+                <li>リスト項目3</li>
+              </ol>
+              <h5>本文はh5から本文はh5から本文はh5から本文はh5から本文はh5から</h5>
+              <p>テキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキスト</p>
+              <blockquote>
+                <p>テキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキスト</p>
+                <cite><a href="/">テキストテキストテキストテキストテキストテキストテキストテキスト</a></cite>
+              </blockquote>
+              <p>テキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキスト</p>
+              <h6>本文はh6から本文はh6から本文はh6から本文はh6から本文はh6から本文はh6から本文はh6から</h6>
+              <p>テキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキスト</p>
+              <p>テキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキスト</p>
+              <figure class="skeleton-figure">
+                <img src="assets/img/media-dummy.png" width="2720" height="1428" alt="{WRITING_TITLE} の画像" loading="lazy" decoding="async">
+                <figcaption>キャプションキャプションキャプションキャプション</figcaption>
+              </figure>
+              <p>テキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキスト</p>
+              <p>テキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキスト</p>
+              <pre><code>&lt;?php
+  echo "Hello, World!"echo "Hello, World!"echo "Hello, World!"echo "Hello, World!"echo "Hello, World!"echo "Hello, World!"echo "Hello, World!"echo "Hello, World!"echo "Hello, World!"echo "Hello, World!";
+?&gt;</code></pre>
+              <p>テキスト<code>display: grid;</code>テキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキスト</p>
+              <p>テキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキストテキスト</p>
             </div>
-            <div class="client-industries">
-              <dl class="client">
-                <dt>Clients</dt>
-                <dd>
-                  <ul>
-                    <li><span class="value"><a href="/">ClientsClientsクライアントクライアント</a></span></li>
-                    <li><span class="value"><a href="/">ClientsClientsクライアントクライアント</a></span></li>
-                    <li><span class="value"><a href="/">ClientsClientsクライアントクライアント</a></span></li>
-                  </ul>
-                </dd>
-              </dl>
-              <dl class="industries">
-                <dt>Industries</dt>
-                <dd>
-                  <ul>
-                    <li><span class="value"><a href="/">IndustriesIndustries業種</a></span></li>
-                  </ul>
-                </dd>
-              </dl>
+            <div class="writing-summary en" lang="en">
+              <h4 class="visually-hidden">English Summary</h4>
+              <p>TextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextText</p>
+              <p>TextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextText</p>
+              <p>TextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextTextText</p>
             </div>
           </div>
         </div>
       </article>
 
       <!-- pagination -->
-      <nav class="pagination" aria-label="Works navigation">
+      <nav class="pagination" aria-label="Writings navigation">
         <ul class="pager-back-list">
-          <li><a href="/works/" class="btn">Back to Works</a></li>
+          <li><a href="/writings/" class="btn">Back to Writings</a></li>
         </ul>
         <ul class="pager-prev-next">
           <li><span class="btn is-disabled">Prev</span></li>
@@ -348,12 +323,12 @@
     </div>
   </section>
 
-  <!-- related-categories -->
+  <!-- related-writings -->
   <section class="card related">
     <div class="inner">
       <header class="head">
-        <h2><span>Same category</span></h2>
-        <p>Other works in {CATEGORY}.</p>
+        <h2><span>Recent Thoughts</span></h2>
+        <p>What's on my mind lately.</p>
       </header>
       <div class="body">
         <ul>
@@ -361,7 +336,7 @@
             <div class="index-mode-meta">
               <ul class="index-mode">
                 <li><data value="000">#000</data></li>
-                <li>Text-only</li>
+                <li>{WRITING_THEME}</li>
               </ul>
               <ul class="meta">
                 <li>Published: <time datetime="2025-01-01" class="value">2025-01-01</time><span class="new">New</span></li>
@@ -376,7 +351,7 @@
             <div class="index-mode-meta">
               <ul class="index-mode">
                 <li><data value="000">#000</data></li>
-                <li>Text-only</li>
+                <li>{WRITING_THEME}</li>
               </ul>
               <ul class="meta">
                 <li>Published: <time datetime="2025-01-01" class="value">2025-01-01</time><span class="new">New</span></li>
@@ -391,7 +366,7 @@
             <div class="index-mode-meta">
               <ul class="index-mode">
                 <li><data value="000">#000</data></li>
-                <li>Text-only</li>
+                <li>{WRITING_THEME}</li>
               </ul>
               <ul class="meta">
                 <li>Published: <time datetime="2025-01-01" class="value">2025-01-01</time><span class="new">New</span></li>
@@ -406,7 +381,7 @@
             <div class="index-mode-meta">
               <ul class="index-mode">
                 <li><data value="000">#000</data></li>
-                <li>Text-only</li>
+                <li>{WRITING_THEME}</li>
               </ul>
               <ul class="meta">
                 <li>Published: <time datetime="2025-01-01" class="value">2025-01-01</time><span class="new">New</span></li>
@@ -421,95 +396,7 @@
             <div class="index-mode-meta">
               <ul class="index-mode">
                 <li><data value="000">#000</data></li>
-                <li>Text-only</li>
-              </ul>
-              <ul class="meta">
-                <li>Published: <time datetime="2025-01-01" class="value">2025-01-01</time><span class="new">New</span></li>
-              </ul>
-            </div>
-            <div class="title-summary">
-              <h3><cite class="value"><a href="/">TitleTitleタイトルTitleTitleタイトル</a></cite></h3>
-              <p class="ja" lang="ja">概要文概要文概要文概要文概要文概要文概要文概要文概要文概要文</p>
-            </div>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <!-- related-tags -->
-  <section class="card related">
-    <div class="inner">
-      <header class="head">
-        <h2><span>Related by tags</span></h2>
-        <p>Other works sharing these tags.</p>
-      </header>
-      <div class="body">
-        <ul>
-          <li>
-            <div class="index-mode-meta">
-              <ul class="index-mode">
-                <li><data value="000">#000</data></li>
-                <li>Text-only</li>
-              </ul>
-              <ul class="meta">
-                <li>Published: <time datetime="2025-01-01" class="value">2025-01-01</time><span class="new">New</span></li>
-              </ul>
-            </div>
-            <div class="title-summary">
-              <h3><cite class="value"><a href="/">TitleTitleタイトルTitleTitleタイトル</a></cite></h3>
-              <p class="ja" lang="ja">概要文概要文概要文概要文概要文概要文概要文概要文概要文概要文</p>
-            </div>
-          </li>
-          <li>
-            <div class="index-mode-meta">
-              <ul class="index-mode">
-                <li><data value="000">#000</data></li>
-                <li>Text-only</li>
-              </ul>
-              <ul class="meta">
-                <li>Published: <time datetime="2025-01-01" class="value">2025-01-01</time><span class="new">New</span></li>
-              </ul>
-            </div>
-            <div class="title-summary">
-              <h3><cite class="value"><a href="/">TitleTitleタイトルTitleTitleタイトル</a></cite></h3>
-              <p class="ja" lang="ja">概要文概要文概要文概要文概要文概要文概要文概要文概要文概要文</p>
-            </div>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <!-- related-clients -->
-  <section class="card related">
-    <div class="inner">
-      <header class="head">
-        <h2><span>Same client</span></h2>
-        <p>Other works for {CLIENT}.</p>
-      </header>
-      <div class="body">
-        <ul>
-          <li>
-            <div class="index-mode-meta">
-              <ul class="index-mode">
-                <li><data value="000">#000</data></li>
-                <li>Text-only</li>
-              </ul>
-              <ul class="meta">
-                <li>Published: <time datetime="2025-01-01" class="value">2025-01-01</time><span class="new">New</span></li>
-              </ul>
-            </div>
-            <div class="title-summary">
-              <h3><cite class="value"><a href="/">TitleTitleタイトルTitleTitleタイトル</a></cite></h3>
-              <p class="ja" lang="ja">概要文概要文概要文概要文概要文概要文概要文概要文概要文概要文</p>
-            </div>
-          </li>
-          <li>
-            <div class="index-mode-meta">
-              <ul class="index-mode">
-                <li><data value="000">#000</data></li>
-                <li>Text-only</li>
+                <li>{WRITING_THEME}</li>
               </ul>
               <ul class="meta">
                 <li>Published: <time datetime="2025-01-01" class="value">2025-01-01</time><span class="new">New</span></li>
@@ -739,7 +626,7 @@
           <li><a href="/clients/">Clients</a></li>
           <li><a href="/search/">Search</a></li>
           <li><a href="/about/">About</a></li>
-          <li><a href="/writings/">Writings</a></li>
+          <li><a href="/writings/" aria-current="page">Writings</a></li>
           <li><a href="/policies/">Policies</a></li>
           <li><a href="/notes/">Notes</a></li>
           <li><a href="/faqs/">FAQs</a></li>

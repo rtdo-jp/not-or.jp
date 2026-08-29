@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja" class="no-js" data-nor-glitch="1">
+<html lang="ja" class="no-js" data-theme="light" data-nor-glitch="1">
 <head>
 <meta charset="utf-8">
 <title>nør. | Ryousuke Tamura Design Office</title>
@@ -32,6 +32,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&family=Noto+Sans+JP:wght@300;400;700&family=Source+Code+Pro:wght@400&display=fallback" rel="stylesheet">
 
+<link rel="stylesheet" href="./assets/css/nor.tokens.css">
+<link rel="stylesheet" href="./assets/css/nor.base.css">
+<link rel="stylesheet" href="./assets/css/nor.ui.css">
+
 <script>
   document.documentElement.classList.remove('no-js');
 </script>
@@ -61,36 +65,6 @@
   html[data-theme="light"] { background-color: #f8fafc; color: #020617; }
   html[data-theme="dark"] { background-color: #020617; color: #eef2f7; }
 </style>
-
-<script>
-  (function () {
-    const KEY = "nor.themeMode.v1";
-    const saved = (function () {
-      try { return localStorage.getItem(KEY); } catch (e) {}
-      try { return sessionStorage.getItem(KEY); } catch (e) {}
-      return null;
-    })();
-    const mode = (String(saved || "auto").trim().toLowerCase());
-    const mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
-    const systemTheme = mq && mq.matches ? "dark" : "light";
-    const theme = (mode === "light" || mode === "dark") ? mode : systemTheme;
-    document.documentElement.setAttribute("data-theme", theme);
-    document.documentElement.style.backgroundColor = (theme === "dark") ? "#020617" : "#F8FAFC";
-  })();
-</script>
-
-<style>
-  html { background-color: #f8fafc; color: #020617; }
-  @media (prefers-color-scheme: dark) {
-    html { background-color: #020617; color: #eef2f7; }
-  }
-  html[data-theme="light"] { background-color: #f8fafc; color: #020617; }
-  html[data-theme="dark"] { background-color: #020617; color: #eef2f7; }
-</style>
-
-<link rel="stylesheet" href="./assets/css/nor.tokens.css">
-<link rel="stylesheet" href="./assets/css/nor.base.css">
-<link rel="stylesheet" href="./assets/css/nor.ui.css">
 
 <script src="./assets/js/nor.js" defer></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-NSEHNNMJDH"></script>
@@ -251,17 +225,14 @@
         <li><a href="/clients/">Clients</a></li>
         <li><a href="/search/">Search</a></li>
       </ul>
-      <div>
-        <ul class="nav-list">
-          <li><a href="/about/">About</a></li>
-          <li><a href="/policies/">Policies</a></li>
-          <li><a href="/notes/">Notes</a></li>
-        </ul>
-        <ul class="nav-list">
-          <li><a href="/faqs/">FAQs</a></li>
-          <li><a href="/contact/">Contact</a></li>
-        </ul>
-      </div>
+      <ul class="nav-list">
+        <li><a href="/about/">About</a></li>
+        <li><a href="/writings/">Writings</a></li>
+        <li><a href="/policies/">Policies</a></li>
+        <li><a href="/notes/">Notes</a></li>
+        <li><a href="/faqs/">FAQs</a></li>
+        <li><a href="/contact/">Contact</a></li>
+      </ul>
     </nav>
     <div class="cookie-agree" hidden>
       <div class="textpair" id="cookie-notice-text">
@@ -817,6 +788,95 @@
     </div>
   </section>
 
+  <!-- related-writings -->
+  <section class="card related">
+    <div class="inner">
+      <header class="head">
+        <h2><span>Recent Thoughts</span></h2>
+        <p>What's on my mind lately.</p>
+      </header>
+      <div class="body">
+        <ul>
+          <li>
+            <div class="index-mode-meta">
+              <ul class="index-mode">
+                <li><data value="000">#000</data></li>
+                <li>{WRITING_THEME}</li>
+              </ul>
+              <ul class="meta">
+                <li>Published: <time datetime="2025-01-01" class="value">2025-01-01</time><span class="new">New</span></li>
+              </ul>
+            </div>
+            <div class="title-summary">
+              <h3><cite class="value"><a href="/">TitleTitleタイトルTitleTitleタイトル</a></cite></h3>
+              <p class="ja" lang="ja">概要文概要文概要文概要文概要文概要文概要文概要文概要文概要文</p>
+            </div>
+          </li>
+          <li>
+            <div class="index-mode-meta">
+              <ul class="index-mode">
+                <li><data value="000">#000</data></li>
+                <li>{WRITING_THEME}</li>
+              </ul>
+              <ul class="meta">
+                <li>Published: <time datetime="2025-01-01" class="value">2025-01-01</time><span class="new">New</span></li>
+              </ul>
+            </div>
+            <div class="title-summary">
+              <h3><cite class="value"><a href="/">TitleTitleタイトルTitleTitleタイトル</a></cite></h3>
+              <p class="ja" lang="ja">概要文概要文概要文概要文概要文概要文概要文概要文概要文概要文</p>
+            </div>
+          </li>
+          <li>
+            <div class="index-mode-meta">
+              <ul class="index-mode">
+                <li><data value="000">#000</data></li>
+                <li>{WRITING_THEME}</li>
+              </ul>
+              <ul class="meta">
+                <li>Published: <time datetime="2025-01-01" class="value">2025-01-01</time><span class="new">New</span></li>
+              </ul>
+            </div>
+            <div class="title-summary">
+              <h3><cite class="value"><a href="/">TitleTitleタイトルTitleTitleタイトル</a></cite></h3>
+              <p class="ja" lang="ja">概要文概要文概要文概要文概要文概要文概要文概要文概要文概要文</p>
+            </div>
+          </li>
+          <li>
+            <div class="index-mode-meta">
+              <ul class="index-mode">
+                <li><data value="000">#000</data></li>
+                <li>{WRITING_THEME}</li>
+              </ul>
+              <ul class="meta">
+                <li>Published: <time datetime="2025-01-01" class="value">2025-01-01</time><span class="new">New</span></li>
+              </ul>
+            </div>
+            <div class="title-summary">
+              <h3><cite class="value"><a href="/">TitleTitleタイトルTitleTitleタイトル</a></cite></h3>
+              <p class="ja" lang="ja">概要文概要文概要文概要文概要文概要文概要文概要文概要文概要文</p>
+            </div>
+          </li>
+          <li>
+            <div class="index-mode-meta">
+              <ul class="index-mode">
+                <li><data value="000">#000</data></li>
+                <li>{WRITING_THEME}</li>
+              </ul>
+              <ul class="meta">
+                <li>Published: <time datetime="2025-01-01" class="value">2025-01-01</time><span class="new">New</span></li>
+              </ul>
+            </div>
+            <div class="title-summary">
+              <h3><cite class="value"><a href="/">TitleTitleタイトルTitleTitleタイトル</a></cite></h3>
+              <p class="ja" lang="ja">概要文概要文概要文概要文概要文概要文概要文概要文概要文概要文</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
   <!-- indices -->
   <section class="indices">
     <div class="inner">
@@ -1031,6 +1091,7 @@
           <li><a href="/clients/">Clients</a></li>
           <li><a href="/search/">Search</a></li>
           <li><a href="/about/">About</a></li>
+          <li><a href="/writings/">Writings</a></li>
           <li><a href="/policies/">Policies</a></li>
           <li><a href="/notes/">Notes</a></li>
           <li><a href="/faqs/">FAQs</a></li>

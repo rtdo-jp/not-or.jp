@@ -99,8 +99,8 @@
   --color-surface-inverse-dark: var(--color-base-000);
 
   /* Text on surface */
-  --color-on-surface-0-dark: var(--color-base-050);
-  --color-on-surface-1-dark: var(--color-base-300);
+  --color-on-surface-0-dark: var(--color-base-000);
+  --color-on-surface-1-dark: var(--color-base-100);
   --color-on-surface-2-dark: var(--color-base-500);
   --color-on-surface-disabled-dark: var(--color-base-600);
 
