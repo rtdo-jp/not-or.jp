@@ -1604,6 +1604,13 @@ function nor_get_header_schema_context(string $site_url, string $page_url, strin
       $work_title = nor_get_work_public_title($work_id, $work_title);
     }
     $breadcrumbs[] = ['name' => $work_title, 'url' => $page_url];
+  } elseif (is_singular('post')) {
+    // Writing detail (post_type = post, e.g. /writings/{slug}/).
+    $schema_page_type = 'WebPage';
+    $breadcrumbs[] = ['name' => 'Writings', 'url' => home_url('/writings/')];
+    $writing_id = (int) get_queried_object_id();
+    $writing_title = trim((string) wp_strip_all_tags((string) get_the_title($writing_id)));
+    $breadcrumbs[] = ['name' => $writing_title, 'url' => $page_url];
   } elseif (function_exists('is_page') && is_page('about')) {
     $schema_page_type = 'AboutPage';
     $breadcrumbs[] = ['name' => 'About', 'url' => $page_url];

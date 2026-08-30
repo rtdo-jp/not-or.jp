@@ -394,7 +394,7 @@
       $og_image_alt = $fallback_alt;
     }
   }
-  $og_type = is_singular('works') ? 'article' : 'website';
+  $og_type = (is_singular('works') || is_singular('post')) ? 'article' : 'website';
   $has_social_meta = ($social_title !== '' || $desc !== '' || $og_image !== '');
 
   $same_as = array_values(array_unique(array_filter([
@@ -494,6 +494,7 @@
     $page_node['description'] = $desc;
   }
   if (is_singular('works')) $page_node['mainEntity'] = ['@id' => $page_base . '#work'];
+  if (is_singular('post')) $page_node['mainEntity'] = ['@id' => $page_base . '#article'];
 
   // FAQPage: build mainEntity from stored FAQ markup when available.
   if ($schema_page_type === 'FAQPage' && function_exists('is_page') && is_page()) {
@@ -601,6 +602,41 @@
     if ($updated_iso !== '') $creative['dateModified'] = $updated_iso;
 
     $schema_graph[] = $creative;
+  }
+
+  if (is_singular('post')) {
+    $writing_id = (int) get_queried_object_id();
+    $writing_name = trim((string) wp_strip_all_tags((string) get_the_title($writing_id)));
+    $writing_summary_ja = trim((string) wp_strip_all_tags((string) get_post_field('post_excerpt', $writing_id)));
+    $writing_summary_en = trim((string) wp_strip_all_tags((string) get_post_meta($writing_id, 'nor_summary_en', true)));
+
+    $writing_desc_pair = [];
+    if ($writing_summary_ja !== '') $writing_desc_pair[] = ['@value' => $writing_summary_ja, '@language' => 'ja'];
+    if ($writing_summary_en !== '') $writing_desc_pair[] = ['@value' => $writing_summary_en, '@language' => 'en'];
+
+    // Article, not CreativeWork: author is the Person (not the Organization,
+    // unlike Works' CreativeWork "creator"), per static's confirmed spec.
+    $article = [
+      '@type' => 'Article',
+      '@id'   => $page_base . '#article',
+      'url'   => $page_url,
+      'headline' => $writing_name,
+      'name'  => $writing_name,
+      'author' => ['@id' => $site_url . '#person'],
+      'publisher' => ['@id' => $site_url . '#organization'],
+      'inLanguage' => ['ja', 'en'],
+      'isPartOf' => ['@id' => $site_url . '#website'],
+      'mainEntityOfPage' => ['@id' => $page_base . '#webpage'],
+    ];
+    if ($og_image !== '') $article['image'] = $og_image;
+    if (!empty($writing_desc_pair)) $article['description'] = $writing_desc_pair;
+
+    $writing_published_iso = (string) get_the_date('c', $writing_id);
+    $writing_updated_iso = (string) get_the_modified_date('c', $writing_id);
+    if ($writing_published_iso !== '') $article['datePublished'] = $writing_published_iso;
+    if ($writing_updated_iso !== '') $article['dateModified'] = $writing_updated_iso;
+
+    $schema_graph[] = $article;
   }
 
   $schema_graph[] = [
