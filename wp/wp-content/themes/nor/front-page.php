@@ -107,6 +107,100 @@
   </section>
 
 <?php
+  // -------------------------
+  // Recent Thoughts (latest Writings; Home, so there's no "current entry" to exclude)
+  // -------------------------
+  $recent_query = new WP_Query([
+    'post_type'           => 'post',
+    'post_status'         => 'publish',
+    'posts_per_page'      => 5,
+    'orderby'             => 'date',
+    'order'               => 'DESC',
+    'ignore_sticky_posts' => true,
+    'no_found_rows'       => true,
+    'fields'              => 'ids',
+  ]);
+  $recent_ids = is_array($recent_query->posts) ? $recent_query->posts : [];
+  wp_reset_postdata();
+
+  // Helper: format Writing Number (#001; no post-ID/loop-index fallback),
+  // matching page-writings.php / single-post.php's own policy.
+  $format_writing_no = function (int $pid): array {
+    $raw = get_post_meta($pid, 'nor_writing_no', true);
+    $n = is_numeric($raw) ? (int) $raw : 0;
+    if ($n > 0) {
+      $val = str_pad((string) $n, 3, '0', STR_PAD_LEFT);
+      return [$val, '#' . $val];
+    }
+    return ['', '—'];
+  };
+
+  $render_recent_item = function (int $pid) use ($format_writing_no) {
+    $r_title = get_the_title($pid);
+    $r_permalink = get_permalink($pid);
+    $r_published = get_the_date('Y-m-d', $pid);
+    $r_published_dt = get_the_date('c', $pid);
+    $r_published_ts = (int) get_post_time('U', false, $pid);
+    $r_is_new = nor_is_recent_timestamp((int) $r_published_ts, 30);
+    $r_categories = get_the_category($pid);
+    $r_theme = (!empty($r_categories) && $r_categories[0] instanceof WP_Term) ? $r_categories[0]->name : '';
+    $r_excerpt = get_the_excerpt($pid);
+    $r_excerpt = is_string($r_excerpt) ? trim((string) preg_replace('/\s+/u', ' ', $r_excerpt)) : '';
+    [$no_val, $no_label] = $format_writing_no($pid);
+    ?>
+        <li>
+          <div class="index-mode-meta">
+            <ul class="index-mode">
+              <li><data value="<?php echo esc_attr($no_val); ?>"><?php echo esc_html($no_label); ?></data></li>
+              <li><?php echo esc_html($r_theme); ?></li>
+            </ul>
+            <ul class="meta">
+              <li>Published: <time datetime="<?php echo esc_attr($r_published_dt); ?>" class="value"><?php echo esc_html($r_published); ?></time><?php if ($r_is_new) : ?><span class="new">New</span><?php endif; ?></li>
+            </ul>
+          </div>
+          <div class="title-summary">
+            <h3><cite class="value"><a href="<?php echo esc_url($r_permalink); ?>"><?php echo esc_html($r_title); ?></a></cite></h3>
+<?php if ($r_excerpt !== '') : ?>
+            <p class="ja" lang="ja"><?php echo esc_html($r_excerpt); ?></p>
+<?php else : ?>
+            <p class="ja" lang="ja">—</p>
+<?php endif; ?>
+          </div>
+        </li>
+    <?php
+  };
+
+  $render_recent_items = function (array $ids) use ($render_recent_item) {
+    foreach ($ids as $rid) {
+      ob_start();
+      $render_recent_item((int) $rid);
+      $item_html = (string) ob_get_clean();
+      $item_html = (string) preg_replace('/\A(?:[ \t]*\R)+/u', '', $item_html);
+      $item_html = (string) preg_replace('/(?:\R[ \t]*)+\z/u', '', $item_html);
+      $item_html = nor_normalize_first_indent($item_html);
+      if ($item_html === '') {
+        continue;
+      }
+      echo (string) preg_replace('/^(?=.*\S)/m', '        ', $item_html) . "\n\n";
+    }
+  };
+
+  if (!empty($recent_ids)) {
+    echo nor_render_template_part('template-parts/card/card-related', null, [
+      'title'        => 'Recent Thoughts',
+      'description'  => "What's on my mind lately.",
+      'ids'          => $recent_ids,
+      'render_items' => $render_recent_items,
+    ], [
+      'trim'                   => 'both',
+      'normalize_first_indent' => true,
+      'indent'                 => 2,
+      'suffix'                 => "\n\n",
+    ]);
+  }
+?>
+
+<?php
   echo nor_render_indices([
     'trim' => 'left',
     'indent' => 2,

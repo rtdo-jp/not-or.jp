@@ -4546,6 +4546,46 @@ add_filter('nav_menu_css_class', function ($classes, $item, $args) {
   return $classes;
 }, 10, 3);
 
+// Writing detail (post_type = post) is information-architecturally a child of
+// the Writings page, but posts have no post_parent/ancestor relationship to
+// pages in WP's data model, so core's own current-menu-ancestor logic never
+// fires here. Identify the Writings menu item by its linked object (a Page),
+// not by comparing URL strings.
+add_filter('nav_menu_link_attributes', function ($atts, $item, $args) {
+  if (!is_singular('post')) return $atts;
+  if (!isset($item->object, $item->type, $item->object_id)) return $atts;
+  if ($item->type !== 'post_type' || $item->object !== 'page') return $atts;
+
+  $writings_page = get_page_by_path('writings');
+  $writings_id = ($writings_page instanceof WP_Post) ? (int) $writings_page->ID : 0;
+  if ($writings_id <= 0) return $atts;
+
+  if ((int) $item->object_id === $writings_id) {
+    $atts['aria-current'] = 'page';
+  }
+
+  return $atts;
+}, 10, 3);
+
+add_filter('nav_menu_css_class', function ($classes, $item, $args) {
+  if (!is_singular('post')) return $classes;
+  if (!isset($item->object, $item->type, $item->object_id)) return $classes;
+  if ($item->type !== 'post_type' || $item->object !== 'page') return $classes;
+
+  $writings_page = get_page_by_path('writings');
+  $writings_id = ($writings_page instanceof WP_Post) ? (int) $writings_page->ID : 0;
+  if ($writings_id <= 0) return $classes;
+
+  if ((int) $item->object_id === $writings_id) {
+    $classes[] = 'current-menu-item';
+    $classes[] = 'current_page_item';
+    $classes[] = 'current-menu-ancestor';
+    $classes[] = 'current_page_ancestor';
+  }
+
+  return $classes;
+}, 10, 3);
+
 // NOTE:
 // /categories/ and /tags/ are handled as normal WordPress Pages.
 // - Page templates: page-categories.php, page-tags.php
