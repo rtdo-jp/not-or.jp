@@ -163,7 +163,7 @@ get_header();
       echo '                  <li>' . esc_html($theme) . '</li>' . "\n";
       echo '                </ul>' . "\n";
       echo '                <ul class="meta">' . "\n";
-      echo '                  <li>Published:<time datetime="' . esc_attr($published_dt) . '" class="value">' . esc_html($published_display) . '</time>' . ($is_new ? '<span class="new">New</span>' : '') . '</li>' . "\n";
+      echo '                  <li>Published: <time datetime="' . esc_attr($published_dt) . '" class="value">' . esc_html($published_display) . '</time>' . ($is_new ? '<span class="new">New</span>' : '') . '</li>' . "\n";
       echo '                </ul>' . "\n";
       echo '              </div>' . "\n";
       echo '              <div class="title-summary">' . "\n";

@@ -905,7 +905,7 @@ const NorShared = (() => {
     NorShared.onDomReady(run);
     NorShared.onPageShow(() => {
       run();
-    });
+    }, { persistedOnly: true });
   };
 
   const init = () => {

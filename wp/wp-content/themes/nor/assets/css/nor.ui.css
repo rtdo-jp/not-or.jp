@@ -787,6 +787,7 @@ a.skip:hover {
 /* Hover
 ----------------- */
 .card .title a:where(:hover) {
+  text-decoration: none;
   opacity: var(--opacity-hover);
 }
 
