@@ -11586,3 +11586,35 @@ add_filter('use_block_editor_for_post_type', function ($use_block_editor, $post_
   if (in_array($post_type, ['post', 'page'], true)) return false;
   return $use_block_editor;
 }, 10, 2);
+
+/**
+ * Writings (post) — restrict the Classic Editor's heading dropdown to H4-H6.
+ *
+ * single-post.php's own template already owns H1 (Hero title), H2 (visually-
+ * hidden section heading) and H3 (visually-hidden "Writing entry"), so post
+ * body content must never introduce another H1-H3. tiny_mce_before_init has
+ * no $post_type argument (unlike use_block_editor_for_post_type above), so the
+ * edit-screen post type is read via get_current_screen() instead. This only
+ * narrows the Visual tab's quick-format menu — the Text tab and saved content
+ * are unaffected, and 'page' / 'works' are untouched.
+ */
+add_filter('tiny_mce_before_init', function ($settings) {
+  if (!is_admin() || !function_exists('get_current_screen')) {
+    return $settings;
+  }
+
+  $screen = get_current_screen();
+
+  if (
+    !$screen
+    || $screen->base !== 'post'
+    || $screen->post_type !== 'post'
+  ) {
+    return $settings;
+  }
+
+  $settings['block_formats'] =
+    'Paragraph=p;Heading 4=h4;Heading 5=h5;Heading 6=h6;Preformatted=pre';
+
+  return $settings;
+});
