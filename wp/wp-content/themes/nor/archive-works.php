@@ -12,6 +12,14 @@
     $section_h2_ja = (string) ($archive_copy['section_h2_ja'] ?? '—');
     $section_h2_en = (string) ($archive_copy['section_h2_en'] ?? '—');
 
+    // Breadcrumb label: mirrors the JSON-LD BreadcrumbList
+    // (nor_get_header_schema_context()'s works-archive branch in
+    // functions.php), which uses "Page {N}" for the same reason — Home
+    // already doubles as the Works index (page 1), so there's no separate
+    // "Works" crumb pointing at /works/, which itself 301s back to Home.
+    $hero_paged = max(1, (int) get_query_var('paged'));
+    $hero_crumb_label = ($hero_paged > 1) ? ('Page ' . $hero_paged) : 'Works Index';
+
     $hero_html = nor_render_template_part('template-parts/hero/hero-pages', null, [
       'title'    => 'Works Index',
       'tagline'  => $tagline,
@@ -21,8 +29,7 @@
       'unit'     => nor_format_count_unit($works_count, 'work', 'works', 'archived'),
       'widget'   => 'none',
       'breadcrumbs' => nor_build_breadcrumbs([
-        ['label' => 'Works', 'url' => home_url('/works/')],
-        ['label' => 'Works Index', 'current' => true],
+        ['label' => $hero_crumb_label, 'current' => true],
       ]),
     ], [
       'trim' => 'both',
@@ -71,7 +78,7 @@
           $work_no_raw = get_post_meta($post_id, 'nor_work_no', true);
           $work_no_int = is_numeric($work_no_raw) ? (int) $work_no_raw : 0;
           if ($work_no_int < 1) $work_no_int = (int) ($offset + $q->current_post + 1);
-          $num = str_pad((string) $work_no_int, 3, '0', STR_PAD_LEFT);
+          $num = nor_format_seq_no($work_no_int);
 
           $card_data = nor_get_work_card_data($post_id, [
             'client_mode'              => 'taxonomy',
@@ -146,7 +153,7 @@
         $empty_title = 'Works Index';
         echo nor_render_empty_works_list([
           'title' => $empty_title,
-          'primary_url' => get_post_type_archive_link('works'),
+          'primary_url' => home_url('/'),
           'primary_label' => 'Back to List',
         ], [
           'trim' => 'right',

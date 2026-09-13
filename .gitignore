@@ -10,6 +10,8 @@ wp/wp-config.php
 wp/wp-content/uploads/
 wp/wp-content/cache/
 wp/wp-content/upgrade/
+wp/.htpasswd
+wp/.htaccess*
 
 # Logs
 *.log

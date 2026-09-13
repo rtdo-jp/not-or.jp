@@ -1,0 +1,1421 @@
+@charset "UTF-8";
+
+/*
+  File: nor.pages.css
+  Author: Ryousuke Tamura
+  Created: 2026-9-2
+  Note: Fixed-page content styles split out of nor.ui.css (Category A,
+  Performance A/B test) for conditional per-page loading. About / FAQs /
+  Policies / Notes / See Also / Contact are not used on Home.
+*/
+
+/*
+  About / FAQs shared
+======================================== */
+:where(.content-pages :is(.content.about, .content.faqs) > .body) {
+  display: flex;
+  flex-direction: column;
+}
+
+:where(:is(.content-pages .content.about, .content-pages .content.faqs) > .body > .title h2 .character-line) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:where(
+  .content.about > .body > .title :is(p, p.ja),
+  .content.faqs > .body > .title :is(p, p.ja)
+) {
+  white-space: nowrap;
+}
+
+:where(
+  .content-pages .content.about,
+  .content-pages .content.faqs
+) {
+  padding-block-start: var(--layout-section-gap-s);
+}
+
+:where(
+  .content-pages .content.about:first-of-type,
+  .content-pages .content.faqs:first-of-type
+) {
+  padding-block-start: 0;
+}
+
+/* Head
+----------------- */
+:where(
+  .content-pages .content.about,
+  .content-pages .content.faqs
+) > .head {
+  padding-block: var(--shape-pad-m);
+  border-top: var(--divider-1);
+}
+
+:where(
+  .content-pages .content.about,
+  .content-pages .content.faqs
+) > .head .index,
+.content-policies .content.policies > .head .index,
+.content-notes .content.notes.major > .head .index {
+  margin-block: 0;
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-tight);
+}
+
+:where(
+  .content-pages .content.about,
+  .content-pages .content.faqs
+) > .head .index .value {
+  display: inline-block;
+}
+
+/* Body
+----------------- */
+:where(
+  .content-pages .content.about,
+  .content-pages .content.faqs
+) > .body {
+  row-gap: var(--element-gap-s);
+  position: relative;
+  border-top: none;
+}
+
+:where(
+  .content-pages .content.about,
+  .content-pages .content.faqs
+) > .body::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 0;
+  border-top: var(--divider-1);
+  pointer-events: none;
+}
+
+:where(
+  .content-pages .content.about,
+  .content-pages .content.faqs
+) > .body > .title {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  column-gap: var(--element-gap-s);
+  min-inline-size: 0;
+}
+
+:where(
+  .content-pages .content.about,
+  .content-pages .content.faqs
+) > .body > .title :where(
+  h2,
+  p.ja
+) {
+  min-inline-size: 0;
+}
+
+:where(
+  .content-pages .content.about,
+  .content-pages .content.faqs
+) > .body > .title h2 {
+  flex: 0 0 var(--layout-mobile-column-3);
+  max-inline-size: var(--layout-mobile-column-3);
+  margin: 0;
+  font-size: var(--type-card-title-size);
+  font-weight: var(--type-card-title-weight);
+  line-height: var(--type-card-title-lh);
+}
+
+:where(
+  .content-pages .content.about,
+  .content-pages .content.faqs
+) > .body > .title h2 .character-line {
+  --character-line-px: var(--shape-pad-xs);
+  --character-line-bg: var(--color-surface-inverse-current);
+  --character-line-fg: var(--color-text-on-inverse);
+  position: relative;
+  z-index: 1;
+}
+
+:root[data-theme="dark"] :where(
+  .content-pages .content.about,
+  .content-pages .content.faqs
+) > .body > .title h2 .character-line {
+  --character-line-bg: var(--color-surface-card);
+  --character-line-fg: var(--color-text-main);
+}
+
+:where(
+  .content-pages .content.about,
+  .content-pages .content.faqs
+) > .body > .title p.ja {
+  margin: 0;
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-tight);
+}
+
+/* Tablet (600px〜1023px)
+---------------------------------------- */
+@media (min-width: 600px) and (max-width: 1023px) {
+  :where(
+    .content-pages .content.about,
+    .content-pages .content.faqs
+  ) {
+    display: flex;
+  }
+
+  :where(
+    .content-pages .content.about,
+    .content-pages .content.faqs
+  ) > .head {
+    flex: 0 0 var(--layout-tablet-column-1);
+    max-inline-size: var(--layout-tablet-column-1);
+  }
+
+  :where(
+    .content-pages .content.about,
+    .content-pages .content.faqs
+  ) > .body {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
+}
+
+/* Desktop (1024px〜)
+---------------------------------------- */
+@media (min-width: 1024px) {
+  :where(
+    .content-pages .content.about,
+    .content-pages .content.faqs
+  ) {
+    display: grid;
+    grid-template-columns: var(--layout-desktop-column-3) minmax(0, 1fr);
+  }
+
+  :where(
+    .content-pages .content.about,
+    .content-pages .content.faqs
+  ) > .head {
+    grid-column: 1;
+  }
+
+  :where(
+    .content-pages .content.about,
+    .content-pages .content.faqs
+  ) > .body {
+    grid-column: 2;
+  }
+}
+
+/*
+  Body links (About / FAQs / Notes / Policies / Contact)
+======================================== */
+/*
+  Inverted from the sitewide a/a:hover default (nor.base.css: no underline
+  normally, underline on hover) — these fixed pages' prose links are
+  underlined normally and lose the underline on hover instead. Scoped to
+  each page's own prose container only (not the shared .content-pages
+  ancestor), so this deliberately excludes the "See Also" cross-link block,
+  Policies' in-page TOC nav, and any other UI chrome that happens to live
+  inside the same content-pages/content-{page} wrapper.
+  :focus-visible is untouched — nor.base.css relies on the underline as the
+  visible focus indicator, so it must keep showing on focus regardless of
+  this hover inversion.
+*/
+:where(
+  .content-about .content.about .main,
+  .content-faqs .content.faqs .detail,
+  .content-notes .content.notes.major .body,
+  .content-policies .content.policies article > :where(.detail, .main),
+  .contact-form .notes .textpair
+) a:where(:link, :visited) {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+:where(
+  .content-about .content.about .main,
+  .content-faqs .content.faqs .detail,
+  .content-notes .content.notes.major .body,
+  .content-policies .content.policies article > :where(.detail, .main),
+  .contact-form .notes .textpair
+) a:hover:not(:focus-visible) {
+  text-decoration: none;
+}
+
+/*
+  About
+======================================== */
+:where(.content-about .content.about :is(.detail, .main)) {
+  display: flex;
+  flex-direction: column;
+}
+
+:where(.content-about .content.about) .detail {
+  row-gap: var(--element-gap-m);
+}
+
+:where(.content-about .content.about) .detail .textpair {
+  padding-block-start: var(--shape-pad-m);
+}
+
+/* Shared typography
+----------------- */
+:where(.content-about .content.about) :where(
+  .detail .textpair .ja,
+  .main
+) {
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-normal);
+}
+
+/* Main
+----------------- */
+:where(.content-about .content.about) .main > :where(
+  .ja,
+  .en
+) p {
+  margin-block: var(--element-gap-xs);
+}
+
+:where(.content-about .content.about) .main > .en ol {
+  padding-block-start: var(--shape-pad-s);
+}
+
+/* Summary
+----------------- */
+:where(.content-about .content.about) .main dl {
+  margin: 0;
+}
+
+:where(.content-about .content.about) .main dt {
+  margin-block-end: var(--element-gap-xs);
+  color: var(--color-text-sub);
+}
+
+:where(.content-about .content.about) .main dd {
+  margin: 0;
+}
+
+/* Rows
+----------------- */
+:where(.content-about .content.about) .main :where(
+  .recorded,
+  .fields,
+  .archived,
+  .languages
+) {
+  display: flex;
+  align-items: baseline;
+  column-gap: var(--element-gap-s);
+  min-inline-size: 0;
+}
+
+:where(.content-about .content.about) .main :where(
+  .recorded,
+  .fields,
+  .archived,
+  .languages
+) dt {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+:where(.content-about .content.about) .main :where(
+  .recorded,
+  .fields,
+  .archived,
+  .languages
+) dd {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  margin: 0;
+}
+
+/* Lists
+----------------- */
+:where(.content-about .content.about) .main :where(
+  .fields ul,
+  .languages ul,
+  .archived ul
+) {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+:where(.content-about .content.about) .main :where(
+  .fields li,
+  .languages li,
+  .archived li
+) {
+  margin: 0;
+}
+
+:where(.content-about .content.about) .main :where(
+  .fields li,
+  .languages li
+):not(:last-child)::after {
+  content: "/";
+  padding-inline: var(--shape-pad-xs);
+  white-space: pre;
+}
+
+:where(.content-about .content.about) .main ol li .value + .value::before {
+  content: "-";
+  padding-inline: var(--shape-pad-xs);
+  white-space: pre;
+  font-style: normal;
+}
+
+/* Summary
+----------------- */
+:where(.content-about .content.about) .main dl.archived li + li::before {
+  content: " - ";
+  white-space: pre;
+}
+
+/* Structure
+----------------- */
+:where(.content-about .content.about[aria-labelledby="structure-heading"]) .main ol li .value + .value::before {
+  content: "-";
+  padding-inline: var(--shape-pad-xs);
+  white-space: pre;
+}
+
+/* Served sectors
+----------------- */
+:where(.content-about .content.about) .main > :where(
+  .ja,
+  .en
+) > ul {
+  display: flex;
+  flex-wrap: wrap;
+  margin-block-start: var(--element-gap-s);
+}
+
+:where(.content-about .content.about) .main > :where(
+  .ja,
+  .en
+) > ul li {
+  margin: 0;
+}
+
+:where(.content-about .content.about) .main > :where(
+  .ja,
+  .en
+) > ul li:not(:last-child)::after {
+  content: "/";
+  padding-inline: var(--shape-pad-xs);
+  white-space: pre;
+}
+
+/* Policy
+----------------- */
+:where(.content-about .content.about) .main .policy dt {
+  margin-block-end: 0;
+}
+
+/* Tablet (768px〜)
+---------------------------------------- */
+@media (min-width: 768px) {
+  :where(.content-about .content.about) .main .policy {
+    display: flex;
+    align-items: flex-start;
+    column-gap: var(--element-gap-s);
+  }
+
+  :where(.content-about .content.about) .main .policy dt {
+    flex: 0 0 auto;
+    margin: 0;
+  }
+
+  :where(.content-about .content.about) .main .policy dd {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    margin: 0;
+  }
+}
+
+/* Desktop (1024px〜)
+---------------------------------------- */
+@media (min-width: 1024px) {
+  :where(.content-about .content.about) > .body > .title h2 {
+    flex: 0 0 var(--layout-desktop-column-4);
+    max-inline-size: var(--layout-desktop-column-4);
+  }
+}
+
+/*
+  FAQs
+======================================== */
+:where(.content-faqs .content.faqs :is(.body > .detail, .faq-qa)) {
+  display: flex;
+  flex-direction: column;
+}
+
+:where(.content-faqs .content.faqs) > .body > .detail {
+  row-gap: var(--element-gap-s);
+}
+
+.content-faqs {
+  counter-reset: faq;
+}
+
+.faq-qa {
+  counter-increment: faq;
+}
+
+/* Q/A label (out of flow)
+----------------- */
+:where(.content-faqs .content.faqs) .faq-qa :where(
+  .question,
+  .answer
+) {
+  position: relative;
+  padding-inline-start: var(--element-gap-m);
+}
+
+:where(.content-faqs .content.faqs) .faq-qa .en {
+  padding-inline-start: var(--optical-2);
+}
+
+:where(.content-faqs .content.faqs) .faq-qa .question::before,
+:where(.content-faqs .content.faqs) .faq-qa .answer::before {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 0;
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-normal);
+  font-weight: inherit;
+  text-align: end;
+  white-space: nowrap;
+}
+
+:where(.content-faqs .content.faqs) .faq-qa .question::before {
+  content: "Q.";
+}
+
+:where(.content-faqs .content.faqs) .faq-qa .answer::before {
+  content: "A.";
+}
+
+/* QA
+----------------- */
+:where(.content-faqs .content.faqs) .faq-qa {
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--element-gap-s);
+  padding-block-start: var(--shape-pad-m);
+}
+
+:where(.content-faqs .content.faqs) .faq-qa :where(
+  .question,
+  .answer
+) {
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+/* Typography
+----------------- */
+:where(.content-faqs .content.faqs) .faq-qa :where(
+  .question .ja,
+  .answer .ja
+) {
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-normal);
+}
+
+/* Tablet (600px〜1023px)
+---------------------------------------- */
+@media (min-width: 600px) and (max-width: 1023px) {
+  :where(.content-faqs .content.faqs) > .body > .title h2 {
+    flex: 0 0 var(--layout-tablet-column-4);
+    max-inline-size: var(--layout-tablet-column-4);
+  }
+}
+
+/* Desktop (1024px〜)
+---------------------------------------- */
+@media (min-width: 1024px) {
+  :where(.content-faqs .content.faqs) > .body > .title h2 {
+    flex: 0 0 var(--layout-desktop-column-4);
+    max-inline-size: var(--layout-desktop-column-4);
+  }
+
+  :where(.content-faqs .content.faqs) .faq-qa {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  :where(.content-faqs .content.faqs) .faq-qa .question {
+    flex: 0 0 var(--layout-desktop-column-4);
+    max-inline-size: var(--layout-desktop-column-4);
+  }
+
+  :where(.content-faqs .content.faqs) .faq-qa .answer {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
+}
+
+/*
+  Policies
+======================================== */
+:where(.content-policies .content.policies :is(.column-1, .column-2, .column-3)) {
+  display: flex;
+  flex-direction: column;
+}
+
+:where(.content.policies article > .title :is(p, p.ja)) {
+  white-space: nowrap;
+}
+
+:where(.content-policies .content.policies) {
+  padding-block-start: var(--layout-section-gap-s);
+}
+
+:where(.content-policies .content.policies):first-of-type {
+  padding-block-start: 0;
+}
+
+/* Head
+----------------- */
+:where(.content-policies .content.policies) > .head {
+  padding-block: var(--shape-pad-m);
+  border-top: var(--divider-1);
+}
+
+:where(.content-policies .content.policies) > .head .index li + li {
+  margin-block-start: var(--element-gap-xs);
+}
+
+:where(.content-policies .content.policies) > .head .value {
+  display: inline-block;
+}
+
+/* Body
+----------------- */
+:where(.content-policies .content.policies) > .body {
+  row-gap: var(--layout-section-gap-s);
+  position: relative;
+  min-inline-size: 0;
+  border-top: none;
+}
+
+:where(.content-policies .content.policies) > .body::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 0;
+  border-top: var(--divider-1);
+  pointer-events: none;
+}
+
+:where(.content-policies .content.policies) :where(
+  .column-1,
+  .column-2,
+  .column-3
+) {
+  row-gap: var(--layout-section-gap-s);
+  min-inline-size: 0;
+}
+
+/* Article
+----------------- */
+:where(.content-policies .content.policies) article {
+  margin: 0;
+  min-inline-size: 0;
+}
+
+/* Title
+----------------- */
+:where(.content-policies .content.policies) article > .title {
+  --title-heading-size: var(--type-base-size);
+  --title-heading-weight: var(--type-weight-regular);
+  --title-heading-lh: var(--type-lh-tight);
+  position: relative;
+  z-index: 1;
+  margin: 0;
+}
+
+:where(.content-policies .content.policies) article > .title .character-line {
+  --character-line-h: auto;
+  --character-line-pt: 0;
+  display: inline-block;
+  padding-inline: var(--shape-pad-xs);
+  background-color: var(--color-surface-inverse-current);
+  color: var(--color-text-on-inverse);
+}
+
+:root[data-theme="dark"] :where(.content-policies .content.policies) article > .title .character-line {
+  background-color: var(--color-surface-card);
+  color: var(--color-text-main);
+}
+
+/* Detail
+----------------- */
+:where(.content-policies .content.policies) article > .detail {
+  margin-block-start: var(--element-gap-l);
+}
+
+/* Main
+----------------- */
+:where(.content-policies .content.policies) article > .main {
+  margin-block-start: var(--element-gap-m);
+}
+
+/* Typography
+----------------- */
+:where(.content-policies .content.policies) article > :where(
+  .detail,
+  .main
+) .ja {
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-normal);
+}
+
+/* Last updated
+----------------- */
+:where(.content-policies .content.policies) > .body > p {
+  margin-block: 0;
+  text-align: right;
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-tight);
+}
+
+/* Lists (main)
+----------------- */
+:where(.content-policies .content.policies) article > .main ul {
+  margin-block-end: var(--element-gap-s);
+  padding-inline-start: var(--shape-pad-l);
+  list-style: disc;
+}
+
+:where(.content-policies .content.policies) article > .main li {
+  margin-block-end: var(--element-gap-xs);
+  line-height: var(--type-lh-normal);
+}
+
+:where(.content-policies .content.policies) article > .main li ul {
+  margin-block-start: var(--element-gap-xs);
+  padding-inline-start: var(--shape-pad-m);
+  list-style: circle;
+}
+
+/* Tablet & Desktop (〜599px)
+---------------------------------------- */
+@media (max-width: 599px) {
+  :where(.content-policies .content.policies) > .body > p {
+    margin-block-start: var(--element-gap-l);
+  }
+}
+
+/* Tablet & Desktop (600px〜1323px)
+---------------------------------------- */
+@media (min-width: 600px) and (max-width: 1323px) {
+  :where(.content-policies .content.policies) {
+    display: block;
+  }
+
+  :where(.content-policies .content.policies) > .head {
+    flex: 0 0 auto;
+    max-inline-size: none;
+  }
+
+  :where(.content-policies .content.policies) > .body > p {
+    margin-block-start: var(--element-gap-l);
+  }
+}
+
+/* Mobile & Tablet (〜1323px)
+---------------------------------------- */
+@media (max-width: 1323px) {
+  :where(.content-policies .content.policies) > .body > :where(
+    .column-1,
+    .column-2,
+    .column-3
+  ) + :where(
+    .column-1,
+    .column-2,
+    .column-3
+  ) {
+    margin-block-start: var(--layout-section-gap-s);
+  }
+}
+
+/* Desktop (1324px)
+---------------------------------------- */
+@media (min-width: 1324px) {
+  :where(.content-policies .content.policies) {
+    display: grid;
+    grid-template-columns: var(--layout-desktop-column-3) minmax(0, 1fr);
+  }
+
+  :where(.content-policies .content.policies) > .head {
+    grid-column: 1;
+  }
+
+  :where(.content-policies .content.policies) .group-name {
+    display: inline-block;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    white-space: nowrap;
+  }
+
+  :where(.content-policies .content.policies) > .body {
+    position: relative;
+    display: grid;
+    grid-column: 2;
+    grid-template-columns: repeat(3, var(--layout-desktop-column-4));
+    justify-content: flex-start;
+    column-gap: var(--layout-desktop-gap);
+  }
+
+  :where(.content-policies .content.policies) > .body > p {
+    position: absolute;
+    top: var(--shape-pad-m);
+    right: 0;
+    margin: 0;
+    line-height: var(--type-lh-tight);
+    text-align: left;
+    white-space: nowrap;
+  }
+}
+
+/* Desktop (1024px〜1352px)
+---------------------------------------- */
+@media (min-width: 1024px) and (max-width: 1352px) {
+  :where(.content-policies .content.policies) > .body > p {
+    position: static;
+    grid-column: 1 / -1;
+    order: 999;
+    margin-block-start: var(--element-gap-m);
+    text-align: right;
+    transform: none;
+    transform-origin: initial;
+  }
+}
+
+/*
+  Notes
+======================================== */
+:where(
+  .content-notes .content.notes.major > .body,
+  .content-notes .middle > .minor
+) {
+  display: flex;
+  flex-direction: column;
+}
+
+:where(.content-notes .middle :is(dt .value, h4 .value, dd.ja, dd.en)) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:where(.content-notes) {
+  /* Column */
+  --notes-col-major-head: var(--layout-mobile-column-1);
+  --notes-col-minor-head: var(--layout-mobile-column-1);
+  --notes-col-en: var(--layout-base-column);
+
+  /* Divider */
+  --notes-row-divider: var(--divider-1);
+
+  /* Middle head */
+  --notes-middle-head-py: var(--shape-pad-s);
+  --notes-middle-head-bb: none;
+  --notes-middle-head-bg: transparent;
+}
+
+/* Major
+----------------- */
+:where(.content-notes .content.notes.major) {
+  padding-block-start: 0;
+  border-top: var(--divider-1);
+}
+
+:where(.content-notes .content.notes.major) > .head {
+  padding-block: var(--shape-pad-m);
+}
+
+:where(.content-notes .content.notes.major) > .head .index .value {
+  display: inline-block;
+  font-weight: var(--type-weight-regular);
+}
+
+/* Body */
+:where(.content-notes .content.notes.major) > .body {
+  row-gap: 0;
+  min-inline-size: 0;
+}
+
+:where(.content-notes .content.notes.major) > .body > .textpair {
+  margin-block: var(--element-gap-sm);
+}
+
+:where(.content-notes .content.notes.major) > .body > .textpair .ja {
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-normal);
+}
+
+/* Middle
+----------------- */
+/* Head */
+:where(.content-notes) .middle > .title {
+  margin: 0;
+  padding-block: var(--notes-middle-head-py);
+  border-top: var(--divider-1);
+  border-bottom: var(--notes-middle-head-bb);
+  min-inline-size: 0;
+  background-color: var(--notes-middle-head-bg);
+}
+
+:where(.content-notes) .middle > .title h4 {
+  margin: 0;
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-compact);
+}
+
+:where(.content-notes) .middle > .title .value {
+  display: block;
+  min-inline-size: 0;
+  padding-inline-end: var(--shape-pad-s);
+  font-weight: var(--type-weight-regular);
+}
+
+/* Body */
+:where(.content-notes) .middle > .minor {
+  min-inline-size: 0;
+}
+
+:where(.content-notes) .middle > .minor dl {
+  display: flex;
+  align-items: center;
+  min-inline-size: 0;
+  margin: 0;
+  padding-block: var(--shape-pad-m);
+}
+
+:where(.content-notes) .middle > .minor dl + dl {
+  border-top: var(--notes-row-divider);
+}
+
+/* Cell */
+:where(.content-notes) .middle > .minor :where(
+  dt,
+  dd
+) {
+  margin: 0;
+}
+
+/* DT */
+:where(.content-notes) .middle > .minor dt {
+  flex: 0 0 var(--notes-col-minor-head);
+  max-inline-size: var(--notes-col-minor-head);
+  padding-inline-end: var(--shape-pad-s);
+}
+
+:where(.content-notes) .middle > .minor :where(
+  dt .value,
+  dd.ja
+) {
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-compact);
+}
+
+:where(.content-notes) .middle > .minor dt .value {
+  display: block;
+}
+
+:where(.content-notes) .middle > .minor dd.ja {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  padding-inline-end: var(--shape-pad-s);
+}
+
+/* DD - EN */
+:where(.content-notes) .middle > .minor dd.en {
+  flex: 0 0 var(--notes-col-en);
+  max-inline-size: var(--notes-col-en);
+  font-size: var(--type-micro-size);
+  line-height: var(--type-lh-normal);
+}
+
+/* Mobile (〜599px)
+---------------------------------------- */
+@media (max-width: 599px) {
+  :where(.content-notes) {
+    --notes-middle-head-py: var(--shape-pad-xs);
+    --notes-middle-head-bb: var(--divider-1);
+    --notes-middle-head-bg: var(--color-surface-middle-head);
+  }
+}
+
+/* Tablet & Desktop (600px〜)
+---------------------------------------- */
+@media (min-width: 600px) {
+  :where(.content-notes) {
+    --notes-middle-head-py: var(--shape-pad-m);
+  }
+
+  :where(.content-notes .content.notes.major) {
+    display: flex;
+  }
+
+  :where(.content-notes .content.notes.major) > .head {
+    flex: 0 0 var(--notes-col-major-head);
+    max-inline-size: var(--notes-col-major-head);
+  }
+
+  :where(.content-notes .content.notes.major) > .body {
+    flex: 1 1 auto;
+  }
+
+  :where(.content-notes) .middle {
+    display: flex;
+    min-inline-size: 0;
+  }
+
+  :where(.content-notes) .middle > .title {
+    flex: 0 0 var(--notes-col-major-head);
+    max-inline-size: var(--notes-col-major-head);
+  }
+
+  :where(.content-notes) .middle > .minor {
+    flex: 1 1 auto;
+  }
+
+  :where(.content-notes) .middle > .minor dl:first-child {
+    border-top: var(--notes-row-divider);
+  }
+}
+
+/* Tablet (600px〜1023px)
+---------------------------------------- */
+@media (min-width: 600px) and (max-width: 1023px) {
+  :where(.content-notes) {
+    --notes-col-major-head: var(--layout-tablet-column-1);
+    --notes-col-minor-head: var(--layout-tablet-column-1);
+  }
+}
+
+/* Desktop (1024px〜)
+---------------------------------------- */
+@media (min-width: 1024px) {
+  :where(.content-notes) {
+    --notes-col-major-head: var(--layout-desktop-column-3);
+    --notes-col-minor-head: var(--layout-desktop-column-1);
+    --notes-col-en: var(--layout-desktop-column-4);
+  }
+
+  :where(.content-notes) .middle > .title {
+    flex: 0 0 var(--notes-col-minor-head);
+    max-inline-size: var(--notes-col-minor-head);
+  }
+}
+
+/*
+  See Also
+======================================== */
+:where(.see-also) {
+  margin-block-start: var(--layout-section-gap-m);
+  padding-block: var(--shape-pad-m);
+  border-top: var(--divider-1);
+  color: var(--color-text-main);
+}
+
+/* Context */
+:where(.content-notes .content.notes.major + .see-also) {
+  margin-block: 0;
+}
+
+/* Head
+----------------- */
+:where(.see-also) > .head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  column-gap: var(--element-gap-m);
+  min-inline-size: 0;
+}
+
+:where(.see-also) > .head :where(
+  h2,
+  h3,
+  p
+) {
+  margin: 0;
+  min-inline-size: 0;
+  font-size: var(--type-base-size);
+  font-weight: var(--type-weight-regular);
+  line-height: var(--type-lh-tight);
+}
+
+/* Body
+----------------- */
+:where(.see-also > .body) {
+  display: flex;
+  flex-direction: column;
+}
+
+:where(.see-also) > .body {
+  row-gap: var(--element-gap-sm);
+  margin-block-start: var(--element-gap-s);
+  min-inline-size: 0;
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-normal);
+}
+
+:where(.see-also) > .body li {
+  margin: 0;
+  min-inline-size: 0;
+}
+
+:where(.see-also) > .body .en {
+  font-size: var(--type-micro-size);
+  line-height: var(--type-lh-compact);
+}
+
+/* Mobile (〜599px)
+---------------------------------------- */
+@media (max-width: 599px) {
+  :where(.see-also) > .body {
+    margin-block-start: var(--element-gap-l);
+  }
+}
+
+/* Tablet (600px〜1023px)
+---------------------------------------- */
+@media (min-width: 600px) and (max-width: 1023px) {
+  :where(.see-also) > .body {
+    margin-inline-start: var(--layout-tablet-column-1);
+  }
+}
+
+/* Desktop (1024px〜)
+---------------------------------------- */
+@media (min-width: 1024px) {
+  :where(.see-also) > .body {
+    margin-inline-start: var(--layout-desktop-column-3);
+  }
+}
+
+/*
+  Contact
+======================================== */
+:where(body.contact) .contact-shell {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100vh;
+  background-color: transparent;
+}
+
+:where(body.contact) :where(
+  .contact-side,
+  .contact-main
+) {
+  min-inline-size: 0;
+}
+
+:where(body.contact) .contact-side {
+  margin-block-end: var(--layout-section-gap-s);
+}
+
+:where(body.contact) .section.contact-sidebar {
+  background-color: transparent;
+}
+
+:where(body.contact) .contact-main {
+  --color-text-muted: var(--color-text-muted-static);
+  background-color: var(--color-surface-card);
+}
+
+:where(body.contact) .contact-main .section {
+  background-color: transparent;
+}
+
+:where(body.contact .announcement) {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Side content
+----------------- */
+:where(body.contact) .contact-sidebar .inner {
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--layout-section-gap-s);
+  min-inline-size: 0;
+}
+
+:where(body.contact) .cookie-notice {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+
+/* Contact notes
+----------------- */
+:where(body.contact) .contact-sidebar .notes .title {
+  margin: 0;
+}
+
+:where(body.contact) .contact-sidebar .notes .title > :where(
+  h2,
+  h3
+) {
+  margin: 0;
+  font-size: var(--type-base-size);
+  font-weight: var(--type-weight-regular);
+  line-height: var(--type-lh-tight);
+}
+
+:where(body.contact) .contact-sidebar .notes .title .character-line {
+  display: inline-block;
+  block-size: auto;
+  padding-block-start: 0;
+  padding-inline: var(--shape-pad-xs);
+  background-color: var(--color-surface-inverse-current);
+  color: var(--color-text-on-inverse);
+}
+
+:root[data-theme="dark"] :where(body.contact) .contact-sidebar .notes .title .character-line {
+  background-color: var(--color-surface-card);
+  color: var(--color-text-main);
+}
+
+:where(body.contact) .contact-sidebar .notes .main {
+  margin-block-start: var(--element-gap-m);
+}
+
+:where(body.contact) .contact-sidebar .notes .main .ja {
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-normal);
+}
+
+:where(body.contact) .contact-sidebar .notes .main .en {
+  font-size: var(--type-micro-size);
+  line-height: var(--type-lh-compact);
+}
+
+:where(body.contact) .contact-sidebar .notes .main p {
+  margin-block: var(--element-gap-xs);
+}
+
+:where(body.contact) .contact-sidebar .notes .main span[aria-hidden="true"] {
+  color: var(--color-status-current-danger);
+}
+
+:where(body.contact) .contact-sidebar .notes .actions {
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--element-gap-m);
+  margin-block-start: var(--layout-section-gap-s);
+}
+
+:where(body.contact) .contact-sidebar .notes .actions .btn {
+  inline-size: var(--layout-mobile-column-2);
+}
+
+/* Contact spacing */
+.section.contact-content {
+  padding-block-start: 0;
+}
+
+/* Main width
+----------------- */
+:where(body.contact) .contact-content .inner {
+  max-inline-size: var(--container-max);
+  margin-inline: auto;
+  padding-inline: var(--container-px);
+  padding-block-start: var(--layout-section-gap-s);
+}
+
+/* Announcement */
+body.contact .announcement {
+  display: none;
+  row-gap: 0;
+  margin-block: 0;
+}
+
+/* Show (error / success / preview) */
+body.contact .announcement.is-error,
+body.contact .announcement.is-success,
+body.contact.is-preview .announcement {
+  display: flex;
+  row-gap: var(--element-gap-s);
+  margin-block-end: var(--layout-section-gap-s);
+}
+
+body.contact .announcement .message {
+  --announcement-message-icon-space-local: var(--announcement-message-icon-space);
+  display: none;
+  position: relative;
+  padding-block: var(--shape-pad-s);
+  padding-inline: var(--shape-pad-l);
+  padding-inline-start: calc(var(--shape-pad-l) + var(--announcement-message-icon-space-local));
+  background-color: var(--status-bg);
+  color: var(--status-fg);
+}
+
+body.contact .announcement .message::before {
+  --announcement-message-icon-top: 50%;
+  --announcement-message-icon-shift-y: -50%;
+  content: var(--status-icon);
+  position: absolute;
+  top: var(--announcement-message-icon-top);
+  left: var(--shape-pad-m);
+  font-size: var(--type-small-size);
+  line-height: var(--type-lh-compact);
+  transform: translateY(var(--announcement-message-icon-shift-y));
+}
+
+body.contact .announcement .message :where(
+  .ja,
+  .en
+) {
+  margin: 0;
+  color: inherit;
+}
+
+body.contact .announcement .message .ja {
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-normal);
+}
+
+body.contact .announcement .message .en {
+  font-size: var(--type-micro-size);
+  line-height: var(--type-lh-compact);
+}
+
+body.contact .announcement.is-error .message.is-error,
+body.contact .announcement.is-success .message.is-success {
+  display: block;
+}
+
+body.contact.is-preview .announcement .message {
+  display: block;
+}
+
+.announcement :where(
+  a,
+  a:link,
+  a:visited
+) {
+  text-decoration: underline;
+  color: inherit;
+}
+
+:where(body.contact) {
+  scroll-padding-top: var(--layout-section-gap-s);
+}
+
+:where(body.contact) .announcement {
+  scroll-margin-top: var(--layout-section-gap-s);
+}
+
+/* Contact notes */
+:where(body.contact) .contact-form > .notes {
+  margin-block: var(--layout-section-gap-s);
+}
+
+:where(body.contact) .contact-form > .notes .textpair {
+  row-gap: var(--element-gap-xs);
+}
+
+:where(body.contact) .contact-form > .notes .textpair .ja {
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-normal);
+}
+
+/* Contact Footer
+----------------- */
+:where(body.contact) #site-foot {
+  padding-block: var(--layout-section-gap-s);
+}
+
+:where(body.contact) #site-foot .inner {
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  column-gap: var(--layout-mobile-gap);
+  max-inline-size: var(--container-max);
+  margin-inline: auto;
+  padding-inline: var(--container-px);
+}
+
+:where(body.contact) #site-foot .mode-select {
+  margin-block-end: 0;
+}
+
+:where(body.contact) #site-foot .copyright {
+  margin: 0;
+  line-height: var(--type-lh-tight);
+  text-align: right;
+}
+
+:where(body.contact) #site-foot .copyright small {
+  font-size: var(--type-micro-size);
+}
+
+/* Desktop (1024px〜)
+---------------------------------------- */
+@media (min-width: 1024px) {
+  :where(body.contact) .contact-shell {
+    display: grid;
+    grid-template-columns: var(--layout-desktop-column-4) 1fr;
+    column-gap: var(--layout-desktop-gap);
+    padding-inline: var(--container-px);
+  }
+
+  :where(body.contact) .contact-side {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    block-size: 100vh;
+    margin-block-end: 0;
+  }
+
+  :where(body.contact) .contact-side .inner {
+    padding-inline: 0;
+  }
+
+  :where(body.contact) .contact-content .inner {
+    inline-size: 100%;
+    max-inline-size: var(--layout-desktop-column-13);
+    padding-block-start: var(--layout-section-gap-s);
+    padding-block-end: var(--shape-pad-xxl);
+  }
+
+  :where(body.contact) #site-head .inner {
+    grid-template-columns: var(--layout-mobile-column-2) 1fr;
+    column-gap: var(--layout-mobile-gap);
+  }
+
+  :where(body.contact) .contact-sidebar .notes .actions .btn {
+    inline-size: var(--layout-desktop-column-2);
+  }
+
+  :where(body.contact) #site-foot {
+    padding-inline: var(--container-px);
+  }
+
+  :where(body.contact) #site-foot .copyright {
+    text-align: right;
+  }
+}
+
+/* Wide (1440px〜): contact page only, center fixed container
+---------------------------------------- */
+@media (min-width: 1440px) {
+  :where(body.contact) .contact-shell {
+    inline-size: var(--container-max);
+    max-inline-size: 100%;
+    margin-inline: auto;
+  }
+}

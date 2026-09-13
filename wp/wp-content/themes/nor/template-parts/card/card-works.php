@@ -71,43 +71,80 @@ if ($types_terms_override !== null) {
     $primary_type_terms = [];
   }
 }
-$excerpt = trim((string) preg_replace('/\s+/u', ' ', $excerpt));
+// B "Inline rich text": excerpt is not itself wrapped in an outer <a> (only
+// the card title is), so <a> must stay a real link — but
+// nor_render_inline_rich_text()'s card_context couples "unwrap <a>" together
+// with "collapse newlines to a single space", and we only want the latter
+// here. So the lower-level pair it calls internally is used directly instead:
+// sanitize to the B allowlist, then collapse newlines/runs of whitespace to
+// a single space (matching this card's pre-existing single-line layout)
+// while still auto-<abbr>-wrapping dictionary terms and leaving explicit
+// <a>/<abbr>/etc. markup untouched.
+if (function_exists('nor_sanitize_inline_rich_text') && function_exists('nor_inline_rich_text_apply_abbr_and_breaks')) {
+  $excerpt_safe = nor_sanitize_inline_rich_text($excerpt);
+  $excerpt_html = ($excerpt_safe !== '')
+    ? nor_inline_rich_text_apply_abbr_and_breaks(
+        $excerpt_safe,
+        function_exists('nor_get_abbreviation_map') ? nor_get_abbreviation_map() : [],
+        false // convert_newlines_to_br = false: join as a single line, not <br>
+      )
+    : '';
+} else {
+  $excerpt_html = esc_html(trim((string) preg_replace('/\s+/u', ' ', $excerpt)));
+}
 
 $category_html = '<span class="value">—</span>';
 if ($category instanceof WP_Term) {
   $cat_url = get_term_link($category);
   if (!is_wp_error($cat_url)) {
-    $category_html = '<span class="value"><a href="' . esc_url($cat_url) . '">' . esc_html($category->name) . '</a></span>';
+    $category_html = '<span class="value"><a href="' . esc_url($cat_url) . '">' . nor_render_work_category_label($category, 'inline') . '</a></span>';
   }
 }
 
-$collect_term_items = static function (array $terms, int $limit): array {
+// Default label: client-masking (where applicable) then common-dictionary
+// abbr enrichment. Tools-group terms pass nor_render_work_tag_tool_label
+// instead (see below) to keep their dedicated separator markup.
+$default_term_label = static function (WP_Term $t): string {
+  $label = function_exists('nor_get_term_public_name')
+    ? nor_get_term_public_name($t, (string) $t->name)
+    : (string) $t->name;
+  return function_exists('nor_render_label_with_abbr')
+    ? nor_render_label_with_abbr($label)
+    : esc_html($label);
+};
+
+$collect_term_items = static function (array $terms, int $limit, callable $label_fn): array {
   $items = [];
   $slice = ($limit > 0) ? array_slice($terms, 0, $limit) : [];
   foreach ($slice as $t) {
     if (!$t instanceof WP_Term) continue;
-    $u = get_term_link($t);
-    if (is_wp_error($u)) continue;
-    $label = function_exists('nor_get_term_public_name')
-      ? nor_get_term_public_name($t, (string) $t->name)
-      : (string) $t->name;
+    if ($t->taxonomy === 'work_industry') {
+      // work_industry's own taxonomy archive is retired (301s to
+      // /clients/index-by-industry/#client-industry-{slug}); link directly at the
+      // real destination instead of bouncing through it. Other taxonomies
+      // (roles/tools/clients/etc.) keep using get_term_link() below.
+      $u = home_url('/clients/index-by-industry/#client-industry-' . $t->slug);
+    } else {
+      $u = get_term_link($t);
+      if (is_wp_error($u)) continue;
+    }
     $items[] = [
-      'url'  => (string) $u,
-      'name' => $label,
+      'url'        => (string) $u,
+      'label_html' => $label_fn($t),
     ];
   }
   return $items;
 };
 
-$render_term_list = static function (array $terms, int $limit, int $indent = 16) use ($collect_term_items): void {
-  $items = $collect_term_items($terms, $limit);
+$render_term_list = static function (array $terms, int $limit, callable $label_fn, int $indent = 16) use ($collect_term_items): void {
+  $items = $collect_term_items($terms, $limit, $label_fn);
   $ul_indent = str_repeat(' ', max(0, $indent));
   $li_indent = str_repeat(' ', max(0, $indent + 2));
 
   echo $ul_indent . "<ul>\n";
   if (!empty($items)) {
     foreach ($items as $item) {
-      echo $li_indent . '<li><span class="value"><a href="' . esc_url($item['url']) . '">' . esc_html($item['name']) . "</a></span></li>\n";
+      echo $li_indent . '<li><span class="value"><a href="' . esc_url($item['url']) . '">' . $item['label_html'] . "</a></span></li>\n";
     }
   } else {
     echo $li_indent . "<li><span class=\"value\">—</span></li>\n";
@@ -128,7 +165,7 @@ $render_term_list = static function (array $terms, int $limit, int $indent = 16)
             </h3>
           </div>
           <div class="meta">
-            <p><?php echo esc_html($excerpt); ?></p>
+            <p><?php echo $excerpt_html; ?></p>
             <dl>
               <dt>Published</dt>
               <dd><time datetime="<?php echo esc_attr($published_dt); ?>" class="value"><?php echo esc_html($published); ?></time><?php if ($is_new) : ?><span class="new">New</span><?php endif; ?></dd>
@@ -144,20 +181,20 @@ $render_term_list = static function (array $terms, int $limit, int $indent = 16)
             <dl class="types">
               <dt><?php echo esc_html($primary_type_label); ?><?php echo $types_colon ? ':' : ''; ?></dt>
               <dd>
-<?php $render_term_list($primary_type_terms, PHP_INT_MAX); ?>
+<?php $render_term_list($primary_type_terms, PHP_INT_MAX, $default_term_label); ?>
               </dd>
             </dl>
             <div class="roles-tools">
               <dl class="roles">
                 <dt>Roles</dt>
                 <dd>
-<?php $render_term_list($roles, 4, 18); ?>
+<?php $render_term_list($roles, 4, $default_term_label, 18); ?>
                 </dd>
               </dl>
               <dl class="tools">
                 <dt>Tools</dt>
                 <dd>
-<?php $render_term_list($tools, 4, 18); ?>
+<?php $render_term_list($tools, 4, 'nor_render_work_tag_tool_label', 18); ?>
                 </dd>
               </dl>
             </div>
@@ -166,13 +203,13 @@ $render_term_list = static function (array $terms, int $limit, int $indent = 16)
             <dl class="client">
               <dt>Clients</dt>
               <dd>
-<?php $render_term_list($clients, 4); ?>
+<?php $render_term_list($clients, 4, $default_term_label); ?>
               </dd>
             </dl>
             <dl class="industries">
               <dt>Industries</dt>
               <dd>
-<?php $render_term_list($industries, 1); ?>
+<?php $render_term_list($industries, 1, $default_term_label); ?>
               </dd>
             </dl>
           </div>

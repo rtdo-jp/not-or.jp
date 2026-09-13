@@ -70,9 +70,6 @@ select {
 
 html {
   font-size: 62.5%;
-
-  /* Prevent layout/scroll drift on reload by making features deterministic early */
-  font-feature-settings: "palt";
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -81,21 +78,14 @@ body {
   min-height: 100vh;
   background-color: var(--color-surface-bg);
   color: var(--color-text-main);
-  font-family:
-    "Inter",
-    "Noto Sans JP",
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-  font-feature-settings: inherit;
+  font-family: Arial, sans-serif;
+  font-feature-settings: normal;
 
   /* Avoid incremental scroll anchoring shifts when fonts/features apply */
   overflow-anchor: none;
   font-size: 1.6rem;
   font-weight: 400;
-  letter-spacing: 0;
+  letter-spacing: normal;
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -114,16 +104,7 @@ body {
 ======================================== */
 
 :root {
-  --font-mono:
-    "Source Code Pro",
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Monaco,
-    Consolas,
-    "Liberation Mono",
-    "Courier New",
-    monospace;
+  --font-mono: monospace;
 }
 
 /* Italic semantics */
@@ -132,7 +113,7 @@ em,
 dfn {
   font-style: italic;
   margin-inline-start: var(--tighten-1);
-  margin-inline-end: var(--optical-2);
+  margin-inline-end: var(--optical-1);
 }
 
 /* Citation / title label: keep roman */
@@ -188,7 +169,6 @@ q {
 
 q::before,
 q::after {
-  content: "";
   content: none;
 }
 
@@ -248,7 +228,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-weight: 500;
+  font-weight: var(--type-weight-regular);
   color: var(--color-text-main);
 }
 

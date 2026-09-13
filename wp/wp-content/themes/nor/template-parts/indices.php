@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 <section class="indices">
   <div class="inner">
     <header class="head">
-      <h2><span>Categories, Tags</span><br><span>&amp; Disciplines</span></h2>
+      <h2><span>Categories, Tags</span><br><span>&amp; Indexes</span></h2>
     </header>
     <div class="body">
       <div class="textpair">
@@ -23,10 +23,10 @@ if ( ! defined( 'ABSPATH' ) ) {
       </div>
 
       <div class="indices-nav">
-        <nav class="categories">
+        <nav class="categories" aria-label="Categories navigation">
           <header class="title">
             <h3>Categories</h3>
-            <p>Browse works by discipline <br>and format.</p>
+            <p>Browse works <br>by design discipline.</p>
           </header>
           <div class="detail">
             <ul>
@@ -121,7 +121,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                 if (!$t || is_wp_error($t) || !$t instanceof WP_Term) continue;
                 $u = get_term_link($t);
                 if (is_wp_error($u)) continue;
-                $label = $label_cb ? (string) $label_cb($t) : esc_html((string) $t->name);
+                $label = $label_cb ? (string) $label_cb($t) : nor_render_label_with_abbr((string) $t->name);
                 echo '                  <li><a href="' . esc_url($u) . '">' . $label . "</a></li>\n";
               }
             };
@@ -164,7 +164,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         <nav class="archives" aria-label="Archives navigation">
           <header class="title">
             <h3>Archives</h3>
-            <p>Browse works <br>by year published.</p>
+            <p>Browse works <br>by publication year.</p>
           </header>
           <div class="detail">
 <?php
@@ -198,7 +198,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         <nav class="clients" aria-label="Clients navigation">
           <header class="title">
             <h3>Clients</h3>
-            <p>Browse clients by name, <br>sorted by initial.</p>
+            <p>Browse clients <br>by initial and industry.</p>
           </header>
 <?php
             // ===== Home: Clients / Industries (exist-only) =====
@@ -287,22 +287,22 @@ if ( ! defined( 'ABSPATH' ) ) {
             // Industries: モック順を優先しつつ、存在するものだけ出す
             $industries_order = [
               'agriculture-forestry-and-fisheries',
-              'mining-and-quarrying',
+              'mining-and-quarrying-of-stone-and-gravel',
               'construction',
               'manufacturing',
               'electricity-gas-heat-supply-and-water',
               'information-and-communications',
-              'transport-and-postal',
+              'transport-and-postal-services',
               'wholesale-and-retail-trade',
               'finance-and-insurance',
-              'real-estate-and-rental',
-              'professional-and-technical-services',
-              'accommodation-and-food-services',
-              'living-and-amusement-services',
-              'education-and-learning-support',
-              'medical-and-welfare',
+              'real-estate-and-goods-rental-and-leasing',
+              'scientific-research-professional-and-technical-services',
+              'accommodations-eating-and-drinking-services',
+              'living-related-and-personal-services-and-amusement-services',
+              'education-learning-support',
+              'medical-health-care-and-welfare',
               'compound-services',
-              'not-elsewhere-classified',
+              'other-unclassified',
             ];
 
             $home_industries = get_terms([
@@ -317,13 +317,13 @@ if ( ! defined( 'ABSPATH' ) ) {
               }
             }
 
-            $iot_url = home_url('/clients/iot/');
-            $industries_url = home_url('/clients/industries/');
+            $iot_url = home_url('/clients/index-by-initial/');
+            $industries_url = home_url('/clients/index-by-industry/');
           ?>
 
           <div class="detail">
-            <nav class="iot" aria-label="Index of terms navigation">
-              <h4>Index of Terms</h4>
+            <nav class="index-by-initial" aria-label="Index by Initial navigation">
+              <h4>Index by Initial</h4>
               <ul>
 <?php
                   foreach ($iot_groups as $key => $g) {
@@ -334,8 +334,8 @@ if ( ! defined( 'ABSPATH' ) ) {
               </ul>
             </nav>
 
-            <nav class="industries" aria-label="Industries navigation">
-              <h4>Industries</h4>
+            <nav class="index-by-industry" aria-label="Index by Industry navigation">
+              <h4>Index by Industry</h4>
               <ul>
 <?php
                   foreach ($industries_order as $slug) {
@@ -343,7 +343,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                     $t = $home_industries_by_slug[$slug];
                     $count = (int) ($industry_counts_by_id[(int) $t->term_id] ?? 0);
                     if ($count <= 0) continue;
-                    echo '                <li><a href="' . esc_url($industries_url . '#client-industry-' . $t->slug) . '">' . esc_html($t->name) . "</a></li>\n";
+                    echo '                <li><a href="' . esc_url($industries_url . '#client-industry-' . $t->slug) . '">' . nor_render_label_with_abbr((string) $t->name) . "</a></li>\n";
                   }
                 ?>
               </ul>

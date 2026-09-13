@@ -2,7 +2,7 @@
 
 <main id="site-main" tabindex="-1">
 <?php
-  // ===== Page meta (Clients: Industries) =====
+  // ===== Page meta (Clients: Index by Industry) =====
   $page_id = get_queried_object_id();
   $page_title = '';
   $page_tagline = '';
@@ -34,9 +34,9 @@
   $page_desc_en = is_string($landing_hero['desc_en'] ?? null) ? (string) $landing_hero['desc_en'] : '';
 
   // ===== Tabs (use actual Page titles) =====
-  $tabs_nav = nor_get_clients_tabs_nav('industries', [
-    'iot'        => 'Index of Terms',
-    'industries' => 'Industries',
+  $tabs_nav = nor_get_clients_tabs_nav('index-by-industry', [
+    'index-by-initial'  => 'Index by Initial',
+    'index-by-industry' => 'Index by Industry',
   ]);
 
   // ===== Hero args (pages common) =====
@@ -61,22 +61,22 @@
   // モック順（JSIC major divisions）を維持したいので “term名順”ではなく “定義順”で出す
   $industries_order = [
     ['slug' => 'agriculture-forestry-and-fisheries', 'en' => 'Agriculture, Forestry and Fisheries', 'ja' => '農業、林業、漁業'],
-    ['slug' => 'mining-and-quarrying', 'en' => 'Mining and Quarrying', 'ja' => '鉱業、採石業、砂利採取業'],
+    ['slug' => 'mining-and-quarrying-of-stone-and-gravel', 'en' => 'Mining and Quarrying of Stone and Gravel', 'ja' => '鉱業、採石業、砂利採取業'],
     ['slug' => 'construction', 'en' => 'Construction', 'ja' => '建設業'],
     ['slug' => 'manufacturing', 'en' => 'Manufacturing', 'ja' => '製造業'],
     ['slug' => 'electricity-gas-heat-supply-and-water', 'en' => 'Electricity, Gas, Heat Supply and Water', 'ja' => '電気・ガス・熱供給・水道業'],
     ['slug' => 'information-and-communications', 'en' => 'Information and Communications', 'ja' => '情報通信業'],
-    ['slug' => 'transport-and-postal', 'en' => 'Transport and Postal', 'ja' => '運輸業、郵便業'],
+    ['slug' => 'transport-and-postal-services', 'en' => 'Transport and Postal Services', 'ja' => '運輸業、郵便業'],
     ['slug' => 'wholesale-and-retail-trade', 'en' => 'Wholesale and Retail Trade', 'ja' => '卸売業、小売業'],
     ['slug' => 'finance-and-insurance', 'en' => 'Finance and Insurance', 'ja' => '金融業、保険業'],
-    ['slug' => 'real-estate-and-rental', 'en' => 'Real Estate and Rental', 'ja' => '不動産業、物品賃貸業'],
-    ['slug' => 'professional-and-technical-services', 'en' => 'Professional and Technical Services', 'ja' => '学術研究、専門・技術サービス業'],
-    ['slug' => 'accommodation-and-food-services', 'en' => 'Accommodation and Food Services', 'ja' => '宿泊業、飲食サービス業'],
-    ['slug' => 'living-and-amusement-services', 'en' => 'Living and Amusement Services', 'ja' => '生活関連サービス業、娯楽業'],
-    ['slug' => 'education-and-learning-support', 'en' => 'Education and Learning Support', 'ja' => '教育、学習支援業'],
-    ['slug' => 'medical-and-welfare', 'en' => 'Medical and Welfare', 'ja' => '医療、福祉'],
+    ['slug' => 'real-estate-and-goods-rental-and-leasing', 'en' => 'Real Estate and Goods Rental and Leasing', 'ja' => '不動産業、物品賃貸業'],
+    ['slug' => 'scientific-research-professional-and-technical-services', 'en' => 'Scientific Research, Professional and Technical Services', 'ja' => '学術研究、専門・技術サービス業'],
+    ['slug' => 'accommodations-eating-and-drinking-services', 'en' => 'Accommodations, Eating and Drinking Services', 'ja' => '宿泊業、飲食サービス業'],
+    ['slug' => 'living-related-and-personal-services-and-amusement-services', 'en' => 'Living-Related and Personal Services and Amusement Services', 'ja' => '生活関連サービス業、娯楽業'],
+    ['slug' => 'education-learning-support', 'en' => 'Education, Learning Support', 'ja' => '教育、学習支援業'],
+    ['slug' => 'medical-health-care-and-welfare', 'en' => 'Medical, Health Care and Welfare', 'ja' => '医療、福祉'],
     ['slug' => 'compound-services', 'en' => 'Compound Services', 'ja' => '複合サービス事業'],
-    ['slug' => 'not-elsewhere-classified', 'en' => 'Not Elsewhere Classified', 'ja' => '他に分類されないもの'],
+    ['slug' => 'other-unclassified', 'en' => 'Other / Unclassified', 'ja' => '他に分類されないもの'],
   ];
 
   // ===== Clients are assigned to exactly ONE industry via term meta =====
@@ -119,40 +119,47 @@
     $clients = ($industry_id > 0 && isset($clients_bucket_by_industry[$industry_id])) ? $clients_bucket_by_industry[$industry_id] : [];
     $count = count($clients);
 
+    // EN display: the work_industry term name is the source of truth (kept
+    // in sync with wp-admin by definition), not the hardcoded 'en' above —
+    // that value now only serves as ordering/fallback for a term that
+    // doesn't exist yet (see the "term が無い" comment above).
+    $en_label = ($term && !is_wp_error($term) && trim((string) $term->name) !== '') ? (string) $term->name : (string) $row['en'];
+
     $client_ids = ($count > 0) ? array_map(fn($t) => (int) $t->term_id, $clients) : [];
     $lu = ($count > 0) ? $last_updated_for_clients($client_ids) : null;
 
     $h3_id = 'client-industry-' . $row['slug'];
-    $aria = 'Clients - Industries: ' . $row['en'];
+    $aria = 'Clients - Industries: ' . $en_label;
 
-    // タイトル改行ルール:
-    // 1) 指定業種は "and" の後で改行（1行目末尾に "and" を残す）
-    // 2) それ以外はカンマがある時のみ改行
-    $title_lines = [];
-    $force_and_split_slugs = [
-      'information-and-communications',
-      'professional-and-technical-services',
-      'accommodation-and-food-services',
-      'living-and-amusement-services',
-      'education-and-learning-support',
+    // Title line breaks: explicit, hand-verified per-slug line arrays.
+    // Regex-derived splitting (by comma count / "and" count) silently
+    // produced wrong or truncated breaks once some industry names grew
+    // longer (e.g. a single "first and only" split point no longer matched
+    // where the name actually needed to wrap), so each of the 17 industries
+    // has a fixed set of lines here instead of a rule engine. Falls back to
+    // the whole label on one line for any slug not listed (shouldn't happen
+    // for the current 17, but keeps this safe if a new industry is added
+    // without updating this map).
+    $title_lines_by_slug = [
+      'agriculture-forestry-and-fisheries'                          => ['Agriculture,', 'Forestry and Fisheries'],
+      'mining-and-quarrying-of-stone-and-gravel'                    => ['Mining and Quarrying of', 'Stone and Gravel'],
+      'construction'                                                => ['Construction'],
+      'manufacturing'                                                => ['Manufacturing'],
+      'electricity-gas-heat-supply-and-water'                       => ['Electricity, Gas,', 'Heat Supply and Water'],
+      'information-and-communications'                              => ['Information and', 'Communications'],
+      'transport-and-postal-services'                               => ['Transport and', 'Postal Services'],
+      'wholesale-and-retail-trade'                                  => ['Wholesale and Retail Trade'],
+      'finance-and-insurance'                                       => ['Finance and Insurance'],
+      'real-estate-and-goods-rental-and-leasing'                    => ['Real Estate and', 'Goods Rental and Leasing'],
+      'scientific-research-professional-and-technical-services'     => ['Scientific Research,', 'Professional and', 'Technical Services'],
+      'accommodations-eating-and-drinking-services'                 => ['Accommodations, Eating', 'and Drinking Services'],
+      'living-related-and-personal-services-and-amusement-services' => ['Living-Related and', 'Personal Services and', 'Amusement Services'],
+      'education-learning-support'                                  => ['Education, Learning Support'],
+      'medical-health-care-and-welfare'                             => ['Medical,', 'Health Care and Welfare'],
+      'compound-services'                                           => ['Compound Services'],
+      'other-unclassified'                                          => ['Other / Unclassified'],
     ];
-    if (in_array((string) $row['slug'], $force_and_split_slugs, true)) {
-      $and_lines = preg_split('/\s+and\s+/', (string) $row['en'], 2);
-      if (count($and_lines) === 2) {
-        $title_lines[] = trim((string) $and_lines[0]) . ' and';
-        $title_lines[] = trim((string) $and_lines[1]);
-      } else {
-        $title_lines[] = (string) $row['en'];
-      }
-    } else {
-      $lines = preg_split('/,\s*/', (string) $row['en'], 2);
-      if (count($lines) === 2) {
-        $title_lines[] = $lines[0] . (str_contains((string) $row['en'], ',') ? ',' : '');
-        $title_lines[] = trim(str_replace(',', '', $lines[1]));
-      } else {
-        $title_lines[] = (string) $row['en'];
-      }
-    }
+    $title_lines = $title_lines_by_slug[(string) $row['slug']] ?? [$en_label];
 
     $links = [];
     if ($count > 0) {
@@ -162,7 +169,7 @@
           continue;
         }
         $links[] = [
-          'url'   => add_query_arg('from', 'industries', $term_link),
+          'url'   => add_query_arg('from', 'index-by-industry', $term_link),
           'label' => function_exists('nor_get_work_client_list_label')
             ? nor_get_work_client_list_label($t, (string) $t->name)
             : (function_exists('nor_get_term_public_name') ? nor_get_term_public_name($t, (string) $t->name) : (string) $t->name),

@@ -108,31 +108,36 @@
     $max_year = ($years_row && isset($years_row->max_year)) ? (int) $years_row->max_year : 0;
     $years_archived_html = '<span class="value">—</span>';
     if ($min_year > 0 && $max_year > 0) {
-      $years_archived_html =
-        '<time class="value" datetime="' . esc_attr((string) $min_year) . '">' . esc_html($min_year) . '</time>' .
-        ' to ' .
-        '<time class="value" datetime="' . esc_attr((string) $max_year) . '">' . esc_html($max_year) . '</time>';
+      if ($min_year === $max_year) {
+        $years_archived_html =
+          '<time class="value" datetime="' . esc_attr((string) $min_year) . '">' . esc_html($min_year) . '</time>';
+      } else {
+        $years_archived_html =
+          '<time class="value" datetime="' . esc_attr((string) $min_year) . '">' . esc_html($min_year) . '</time>' .
+          ' to ' .
+          '<time class="value" datetime="' . esc_attr((string) $max_year) . '">' . esc_html($max_year) . '</time>';
+      }
     }
 
     // ===== Served sectors: top 10 industries by registered clients =====
     $industry_label_map = [
       'agriculture-forestry-and-fisheries'      => ['ja' => '農業、林業、漁業', 'en' => 'Agriculture, Forestry and Fisheries'],
-      'mining-and-quarrying'                    => ['ja' => '鉱業、採石業、砂利採取業', 'en' => 'Mining and Quarrying'],
+      'mining-and-quarrying-of-stone-and-gravel' => ['ja' => '鉱業、採石業、砂利採取業', 'en' => 'Mining and Quarrying of Stone and Gravel'],
       'construction'                            => ['ja' => '建設業', 'en' => 'Construction'],
       'manufacturing'                           => ['ja' => '製造業', 'en' => 'Manufacturing'],
       'electricity-gas-heat-supply-and-water'  => ['ja' => '電気・ガス・熱供給・水道業', 'en' => 'Electricity, Gas, Heat Supply and Water'],
       'information-and-communications'          => ['ja' => '情報通信業', 'en' => 'Information and Communications'],
-      'transport-and-postal'                    => ['ja' => '運輸業、郵便業', 'en' => 'Transport and Postal'],
+      'transport-and-postal-services'           => ['ja' => '運輸業、郵便業', 'en' => 'Transport and Postal Services'],
       'wholesale-and-retail-trade'              => ['ja' => '卸売業、小売業', 'en' => 'Wholesale and Retail Trade'],
       'finance-and-insurance'                   => ['ja' => '金融業、保険業', 'en' => 'Finance and Insurance'],
-      'real-estate-and-rental'                  => ['ja' => '不動産業、物品賃貸業', 'en' => 'Real Estate and Rental'],
-      'professional-and-technical-services'     => ['ja' => '学術研究、専門・技術サービス業', 'en' => 'Professional and Technical Services'],
-      'accommodation-and-food-services'         => ['ja' => '宿泊業、飲食サービス業', 'en' => 'Accommodation and Food Services'],
-      'living-and-amusement-services'           => ['ja' => '生活関連サービス業、娯楽業', 'en' => 'Living and Amusement Services'],
-      'education-and-learning-support'          => ['ja' => '教育、学習支援業', 'en' => 'Education and Learning Support'],
-      'medical-and-welfare'                     => ['ja' => '医療、福祉', 'en' => 'Medical and Welfare'],
+      'real-estate-and-goods-rental-and-leasing' => ['ja' => '不動産業、物品賃貸業', 'en' => 'Real Estate and Goods Rental and Leasing'],
+      'scientific-research-professional-and-technical-services' => ['ja' => '学術研究、専門・技術サービス業', 'en' => 'Scientific Research, Professional and Technical Services'],
+      'accommodations-eating-and-drinking-services' => ['ja' => '宿泊業、飲食サービス業', 'en' => 'Accommodations, Eating and Drinking Services'],
+      'living-related-and-personal-services-and-amusement-services' => ['ja' => '生活関連サービス業、娯楽業', 'en' => 'Living-Related and Personal Services and Amusement Services'],
+      'education-learning-support'              => ['ja' => '教育、学習支援業', 'en' => 'Education, Learning Support'],
+      'medical-health-care-and-welfare'         => ['ja' => '医療、福祉', 'en' => 'Medical, Health Care and Welfare'],
       'compound-services'                       => ['ja' => '複合サービス事業', 'en' => 'Compound Services'],
-      'not-elsewhere-classified'                => ['ja' => '他に分類されないもの', 'en' => 'Not Elsewhere Classified'],
+      'other-unclassified'                      => ['ja' => '他に分類されないもの', 'en' => 'Other / Unclassified'],
     ];
 
     $all_clients = get_terms([
@@ -162,10 +167,13 @@
       $map = $industry_label_map[$slug] ?? null;
 
       $ja_name = is_array($map) ? (string) ($map['ja'] ?? '') : '';
-      $en_name = is_array($map) ? (string) ($map['en'] ?? '') : '';
-
       if ($ja_name === '') $ja_name = (string) $term->name;
-      if ($en_name === '') $en_name = (string) $term->name;
+
+      // EN display: the work_industry term name is the source of truth (kept
+      // in sync with wp-admin by definition). $term is always a real,
+      // already-fetched term here (see the `continue` above), so there's no
+      // "not created yet" fallback case to cover, unlike the JA map above.
+      $en_name = (string) $term->name;
 
       $ja_desc = trim((string) $term->description);
       if ($ja_desc === $ja_name) $ja_desc = '';
@@ -205,7 +213,7 @@
         $note = isset($row[$note_key]) ? (string) $row[$note_key] : '';
         if ($slug === '' || $label === '') continue;
         $out .= "                    <li>\n";
-        $out .= '                      <span class="value"><a href="' . esc_url(home_url('/clients/industries/#client-industry-' . $slug)) . '">' . esc_html($label) . "</a></span>\n";
+        $out .= '                      <span class="value"><a href="' . esc_url(home_url('/clients/index-by-industry/#client-industry-' . $slug)) . '">' . esc_html($label) . "</a></span>\n";
         if ($note !== '') {
           if ($note_key === 'ja_desc') {
             $out .= '                      （<span class="value">' . esc_html($note) . "</span>）\n";
@@ -268,7 +276,7 @@
                 <dd><data class="value" value="<?php echo esc_attr($works_count); ?>"><?php echo esc_html($works_count); ?></data> works.</dd>
               </dl>
               <dl class="fields">
-                <dt>Core fields:</dt>
+                <dt>Categories:</dt>
                 <dd>
                   <ul>
 <?php echo $render_core_category_items($core_categories); ?>
@@ -312,8 +320,8 @@
                   <li><span class="value">制作分野別の分類</span>：<dfn class="value"><a href="<?php echo esc_url(home_url('/categories/')); ?>">Categories</a></dfn></li>
                   <li><span class="value">制作物・役割・使用ツールの詳細分類</span>：<dfn class="value"><a href="<?php echo esc_url(home_url('/tags/')); ?>">Tags</a></dfn></li>
                   <li><span class="value">制作・公開年による時系列整理</span>：<dfn class="value"><a href="<?php echo esc_url(home_url('/archives/')); ?>">Archives</a></dfn></li>
-                  <li><span class="value">取引先名と業種の索引</span>：<dfn class="value"><a href="<?php echo esc_url(home_url('/clients/iot/')); ?>">Clients</a></dfn></li>
-                  <li><span class="value">全文検索による横断参照</span>：<dfn class="value"><a href="<?php echo esc_url(home_url('/search/')); ?>">Search</a></dfn></li>
+                  <li><span class="value">取引先名と業種の索引</span>：<dfn class="value"><a href="<?php echo esc_url(home_url('/clients/index-by-initial/')); ?>">Clients</a></dfn></li>
+                  <li><span class="value">キーワード検索によるWorksの横断参照</span>：<dfn class="value"><a href="<?php echo esc_url(home_url('/search/')); ?>">Search</a></dfn></li>
                 </ol>
               </div>
               <div class="en" lang="en">
@@ -321,8 +329,8 @@
                   <li><dfn class="value"><a href="<?php echo esc_url(home_url('/categories/')); ?>">Categories</a></dfn>: <span class="value">by design discipline</span></li>
                   <li><dfn class="value"><a href="<?php echo esc_url(home_url('/tags/')); ?>">Tags</a></dfn>: <span class="value">by medium, roles, and tools</span></li>
                   <li><dfn class="value"><a href="<?php echo esc_url(home_url('/archives/')); ?>">Archives</a></dfn>: <span class="value">by year of creation or release</span></li>
-                  <li><dfn class="value"><a href="<?php echo esc_url(home_url('/clients/industries/')); ?>">Clients</a></dfn>: <span class="value">index by name and industry</span></li>
-                  <li><dfn class="value"><a href="<?php echo esc_url(home_url('/search/')); ?>">Search</a></dfn>: <span class="value">full-text cross-reference</span></li>
+                  <li><dfn class="value"><a href="<?php echo esc_url(home_url('/clients/index-by-initial/')); ?>">Clients</a></dfn>: <span class="value">index by name and industry</span></li>
+                  <li><dfn class="value"><a href="<?php echo esc_url(home_url('/search/')); ?>">Search</a></dfn>: <span class="value">keyword search across Works</span></li>
                 </ol>
               </div>
             </div>

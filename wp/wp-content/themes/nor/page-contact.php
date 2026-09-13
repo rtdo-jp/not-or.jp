@@ -88,10 +88,10 @@
           </div>
           <div class="main">
             <div class="ja" lang="ja">
-              <p><em><span aria-hidden="true">*</span>は必須項目です。</em><br>日本語での御連絡を推奨しています（英語も受け付けています）。すべてのお問い合わせに御返信できない場合があります。<br class="desktop tablet">また、初めて御連絡いただく場合は、対面での御挨拶又は御紹介経由を前提としています。</p>
+              <p><em><span aria-hidden="true">*</span>は必須項目です。</em><br>日本語での御連絡を推奨しています（英語も受け付けています）。すべてのお問い合わせに御返信できない場合があります。<br class="desktop tablet">制作に関する初回の御相談は、対面での御挨拶又は御紹介経由を前提としています。</p>
             </div>
             <div class="en" lang="en">
-              <p><em><span aria-hidden="true">*</span> indicates required fields.</em><br>Japanese is preferred (English is accepted). nør. may not be able to reply to every message.<br class="desktop tablet">Advertising or sales emails are not accepted. For first-time inquiries, nør. accepts contact in person or via referral only.</p>
+              <p><em><span aria-hidden="true">*</span> indicates required fields.</em><br>Japanese is preferred (English is accepted). nør. may not be able to reply to every message.<br class="desktop tablet">Advertising or sales emails are not accepted. Initial inquiries about design work are accepted in person or via referral only.</p>
             </div>
           </div>
           <ul class="actions">

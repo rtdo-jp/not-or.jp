@@ -91,7 +91,7 @@
     echo "          <p class=\"en\" lang=\"en\">No archives yet. <br class=\"desktop tablet\">Add works to build year-based archives.</p>\n";
     echo "        </div>\n";
     echo "        <ul class=\"actions\">\n";
-    echo '          <li><a href="' . esc_url(home_url('/works/')) . "\" class=\"btn\">Back to Works</a></li>\n";
+    echo '          <li><a href="' . esc_url(home_url('/')) . "\" class=\"btn\">Back to Works</a></li>\n";
     echo '          <li><a href="' . esc_url(home_url('/')) . "\" class=\"btn\">Back to Home</a></li>\n";
     echo "        </ul>\n";
     echo "      </div>\n";

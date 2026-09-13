@@ -25,7 +25,7 @@
 
             $post_id = (int) get_the_ID();
             $work_no = (int) get_post_meta($post_id, 'nor_work_no', true);
-            $num = str_pad((string) max(0, $work_no), 3, '0', STR_PAD_LEFT);
+            $num = nor_format_seq_no(max(0, $work_no));
 
             $card_data = nor_get_work_card_data($post_id, [
               'client_mode'              => 'meta',
@@ -129,7 +129,7 @@
     $raw = get_post_meta($pid, 'nor_writing_no', true);
     $n = is_numeric($raw) ? (int) $raw : 0;
     if ($n > 0) {
-      $val = str_pad((string) $n, 3, '0', STR_PAD_LEFT);
+      $val = nor_format_seq_no($n);
       return [$val, '#' . $val];
     }
     return ['', '—'];
@@ -145,14 +145,22 @@
     $r_categories = get_the_category($pid);
     $r_theme = (!empty($r_categories) && $r_categories[0] instanceof WP_Term) ? $r_categories[0]->name : '';
     $r_excerpt = get_the_excerpt($pid);
-    $r_excerpt = is_string($r_excerpt) ? trim((string) preg_replace('/\s+/u', ' ', $r_excerpt)) : '';
+    if (is_string($r_excerpt)) {
+      // CJK-aware single-line collapse. Preserve the existing behavior of
+      // this path, which did not strip HTML tags, so strip_tags is off.
+      // See nor_normalize_single_line_text() in functions.php for the full
+      // rationale.
+      $r_excerpt = nor_normalize_single_line_text($r_excerpt, false);
+    } else {
+      $r_excerpt = '';
+    }
     [$no_val, $no_label] = $format_writing_no($pid);
     ?>
         <li>
           <div class="index-mode-meta">
             <ul class="index-mode">
               <li><data value="<?php echo esc_attr($no_val); ?>"><?php echo esc_html($no_label); ?></data></li>
-              <li><?php echo esc_html($r_theme); ?></li>
+              <li><?php echo nor_render_writing_theme_label($r_theme); ?></li>
             </ul>
             <ul class="meta">
               <li>Published: <time datetime="<?php echo esc_attr($r_published_dt); ?>" class="value"><?php echo esc_html($r_published); ?></time><?php if ($r_is_new) : ?><span class="new">New</span><?php endif; ?></li>

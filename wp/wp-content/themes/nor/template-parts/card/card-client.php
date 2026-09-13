@@ -46,12 +46,15 @@ foreach ($title_lines as $line) {
   $title_lines_html .= '<span class="character-line">' . esc_html($line) . '</span>';
 }
 
-$updated_html = '';
+// "Last updated:" itself is always shown; only the value differs. No <time>
+// is emitted when there's no date to avoid a dummy datetime="" attribute.
 if ($lu) {
-  $updated_html = 'Last updated:<time datetime="' . esc_attr((string) ($lu['dt'] ?? '')) . '" class="value">' . esc_html((string) ($lu['d'] ?? '')) . '</time>';
+  $updated_html = 'Last updated: <time datetime="' . esc_attr((string) ($lu['dt'] ?? '')) . '" class="value">' . esc_html((string) ($lu['d'] ?? '')) . '</time>';
   if (!empty($lu['is_new'])) {
     $updated_html .= '<span class="new">New</span>';
   }
+} else {
+  $updated_html = 'Last updated: <span class="value">—</span>';
 }
 
 $link_items = [];

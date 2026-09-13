@@ -1,0 +1,666 @@
+@charset "UTF-8";
+
+/*
+  File: nor.works.css
+  Author: Ryousuke Tamura
+  Created: 2026-9-2
+  Note: Works-related card variants split out of nor.ui.css (Category A,
+  Performance A/B test) for conditional per-page loading. Card Taxonomy /
+  Card Archive / Card Client are not used on Home. Card Article moved out
+  to nor.article.css (2026-9-2) — it's shared with Writings detail, not
+  Works-only like the other three.
+*/
+
+/*
+  Card Taxonomy
+======================================== */
+.card.taxonomy .title h3 :where(a, span),
+.card.archive .title h3 a {
+  position: relative;
+  display: block;
+  max-inline-size: 100%;
+}
+
+.card.taxonomy .title h3 span .character-line {
+  --character-line-bg: var(--color-surface-elevated);
+  --character-line-fg: var(--color-text-main);
+}
+
+:root[data-theme="dark"] .card.taxonomy .title h3 span .character-line {
+  --character-line-bg: var(--color-surface-elevated);
+  --character-line-fg: var(--color-text-main);
+}
+
+.card.taxonomy .title h3 a:focus-visible,
+.card.archive .title h3 a:focus-visible {
+  z-index: var(--layer-overlay);
+}
+
+.card.taxonomy .head {
+  display: flex;
+  margin: 0;
+}
+
+.card.taxonomy .head :where(
+  .label,
+  .index data
+) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--shape-pad-s);
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-tight);
+}
+
+/* Head: label */
+.card.taxonomy .head .label {
+  z-index: var(--layer-overlay);
+  flex: 0 0 var(--layout-base-column);
+  margin: 0;
+  background-color: var(--color-surface-inverse-current);
+  color: var(--color-text-on-inverse);
+}
+
+/* Head: index */
+.card.taxonomy .head .index {
+  flex: 1 1 auto;
+  margin: 0;
+}
+
+.card.taxonomy .head .index data {
+  background-color: var(--color-surface-elevated);
+  color: var(--color-text-sub);
+}
+
+/* Content: ja
+----------------- */
+.card.taxonomy .content > .ja {
+  margin: 0;
+  padding-inline: var(--shape-pad-s);
+  padding-block: var(--shape-pad-s);
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-normal);
+  background-color: var(--color-surface-inverse-current);
+  color: var(--color-text-on-inverse);
+}
+
+/* Specific
+----------------- */
+.card.taxonomy .specific {
+  display: flex;
+  background-color: var(--color-surface-inverse-current);
+}
+
+/* Dark mode override: taxonomy surfaces
+----------------- */
+:root[data-theme="dark"] .card.taxonomy :where(
+  .head .label,
+  .content > .ja,
+  .specific
+) {
+  background-color: var(--color-surface-card); /* mode/dark/surface/1 */
+  color: var(--color-text-sub);               /* mode/dark/on-surface/0 */
+}
+
+:root[data-theme="dark"] .card.taxonomy .stats :where(
+  .count,
+  .unit
+) {
+  color: var(--color-text-sub);
+}
+
+:root[data-theme="dark"] .card.taxonomy .title {
+  --title-p-color: var(--color-text-sub);
+}
+
+/* Stats
+----------------- */
+.card.taxonomy .stats {
+  --stats-unit-mt: var(--element-gap-xs);
+  --stats-unit-lh: var(--type-lh-compact);
+  flex: 0 0 var(--layout-base-column);
+  max-inline-size: var(--layout-base-column);
+  margin: 0;
+  padding-inline: var(--shape-pad-s);
+  padding-block-end: var(--shape-pad-s);
+}
+
+.card.taxonomy .stats :where(
+  .count,
+  .unit
+) {
+  display: block;
+  color: var(--color-text-on-inverse);
+}
+
+.card.taxonomy .stats .count {
+  font-size: var(--stats-count-size, var(--type-count-m-size));
+  font-weight: var(--stats-count-weight, var(--type-count-m-weight));
+  line-height: var(--stats-count-lh, var(--type-count-m-lh));
+}
+
+.card.taxonomy .stats .unit {
+  margin-block-start: var(--stats-unit-mt);
+  font-size: var(--type-small-size);
+  line-height: var(--stats-unit-lh);
+}
+
+/* Title
+----------------- */
+.card.taxonomy .title {
+  --title-p-color: var(--color-text-on-inverse);
+  padding-block-end: var(--shape-pad-s);
+}
+
+.card.taxonomy .title :is(
+  p,
+  p.ja
+) {
+  font-size: var(--title-p-size);
+  line-height: var(--title-p-lh);
+  color: var(--title-p-color);
+}
+
+/* Meta
+----------------- */
+.card.taxonomy .meta {
+  row-gap: var(--element-gap-m);
+  margin-block-start: var(--element-gap-m);
+}
+
+/* Meta: en */
+.card.taxonomy .meta .en {
+  margin: 0;
+  font-size: var(--type-small-size);
+  line-height: var(--type-lh-compact);
+}
+
+/* Children
+----------------- */
+.card.taxonomy .children {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--element-gap-xs) var(--element-gap-xs);
+  font-size: var(--type-small-size);
+  line-height: var(--type-lh-tight);
+}
+
+.card.taxonomy .children li:not(:last-child)::after {
+  content: ",";
+}
+
+/* Actions
+----------------- */
+.card.taxonomy .actions {
+  display: flex;
+  margin-block-start: var(--element-gap-m);
+  margin-block-end: var(--layout-section-gap-s);
+}
+
+.card.taxonomy .actions .more {
+  margin: 0;
+}
+
+.card.taxonomy .actions .more .btn {
+  inline-size: var(--layout-mobile-column-2);
+  text-align: center;
+}
+
+/* Tablet (600px〜1023px)
+---------------------------------------- */
+@media (min-width: 600px) and (max-width: 1023px) {
+  /* Card */
+  .card.taxonomy {
+    position: relative;
+  }
+
+  /* Head */
+  .card.taxonomy .head {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: var(--layer-overlay);
+    flex-direction: column;
+  }
+
+  .card.taxonomy .head .label {
+    flex: 0 0 auto;
+    inline-size: var(--layout-base-column);
+  }
+
+  .card.taxonomy .head .index data {
+    inline-size: var(--layout-base-column);
+    font-size: var(--type-content-title-size);
+    font-weight: var(--type-content-title-weight);
+    line-height: var(--type-lh-tight);
+  }
+
+  /* Body / Content layout */
+  .card.taxonomy .body {
+    position: relative;
+    margin-block: 0;
+  }
+
+  .card.taxonomy .content {
+    display: grid;
+    grid-template-columns: var(--layout-tablet-column-2) minmax(0, 1fr);
+    column-gap: var(--layout-tablet-gap);
+  }
+
+  .card.taxonomy .content > .ja {
+    grid-column: 1 / -1;
+    padding-block-start: var(--shape-pad-s);
+    text-align: right;
+  }
+
+  .card.taxonomy .specific {
+    flex-direction: column;
+    grid-column: 1;
+    padding-block-end: var(--shape-pad-xxl);
+  }
+
+  .card.taxonomy .title p {
+    padding-inline: var(--shape-pad-s);
+    line-height: var(--type-lh-compact);
+  }
+
+  .card.taxonomy .stats {
+    flex: 0 0 auto;
+    order: 2;
+    max-inline-size: none;
+  }
+
+  .card.taxonomy .stats .count {
+    font-size: var(--type-count-l-size);
+    font-weight: var(--type-count-l-weight);
+    line-height: var(--type-count-l-lh);
+  }
+
+  .card.taxonomy .stats .unit {
+    margin-block: 0;
+    font-size: var(--type-base-size);
+    line-height: var(--type-lh-tight);
+  }
+
+  /* Meta */
+  .card.taxonomy .meta {
+    grid-column: 2;
+    margin-block: 0;
+    padding-block: var(--shape-pad-l) var(--shape-pad-xxl);
+  }
+
+  .card.taxonomy .meta .en,
+  .card.taxonomy .children {
+    text-align: right;
+  }
+
+  .card.taxonomy .children {
+    justify-content: flex-end;
+  }
+
+  .card.taxonomy .meta .children {
+    margin-block-start: var(--element-gap-m);
+  }
+
+  /* Actions */
+  .card.taxonomy .actions {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+  }
+
+  .card.taxonomy .actions .more .btn {
+    inline-size: var(--layout-tablet-column-2);
+  }
+}
+
+/* Desktop (1024px〜)
+---------------------------------------- */
+@media (min-width: 1024px) {
+  /* Card */
+  .card.taxonomy {
+    display: grid;
+    grid-template-columns: var(--layout-base-column) minmax(0, 1fr);
+    align-items: flex-start;
+    padding-block: 0;
+  }
+
+  /* Head */
+  .card.taxonomy .head {
+    flex-direction: column;
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .card.taxonomy .head .label {
+    flex: 0 0 auto;
+    inline-size: var(--layout-base-column);
+  }
+
+  .card.taxonomy .head .index data {
+    inline-size: var(--layout-base-column);
+    font-size: var(--type-count-m-size);
+    font-weight: var(--type-count-m-weight);
+    line-height: var(--type-lh-tight);
+  }
+
+  /* Body */
+  .card.taxonomy .body {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-column: 2;
+    grid-row: 1;
+    margin-block: 0;
+  }
+
+  .card.taxonomy .content {
+    display: grid;
+    grid-template-columns: var(--layout-desktop-column-5) minmax(0, 1fr);
+    grid-column: 1;
+    column-gap: var(--layout-desktop-gap);
+  }
+
+  .card.taxonomy .content > .ja {
+    grid-column: 1 / -1;
+    margin-inline-end: var(--layout-desktop-column-2);
+    padding-inline: var(--shape-pad-s) var(--shape-pad-xl);
+    padding-block: var(--shape-pad-s);
+    text-align: right;
+  }
+
+  .card.taxonomy .specific {
+    grid-column: 1;
+    padding-block-end: var(--shape-pad-xxl);
+  }
+
+  .card.taxonomy .stats {
+    max-inline-size: none;
+    padding-inline-start: var(--layout-desktop-gap);
+    padding-block-end: var(--shape-pad-l);
+  }
+
+  .card.taxonomy .stats .count {
+    margin-block-start: var(--tighten-10);
+    font-size: var(--type-count-l-size);
+    font-weight: var(--type-count-l-weight);
+    line-height: var(--type-count-l-lh);
+  }
+
+  .card.taxonomy .stats .unit {
+    margin-block: 0;
+    font-size: var(--type-base-size);
+    line-height: var(--type-lh-tight);
+  }
+
+  .card.taxonomy .title {
+    flex: 0 0 var(--layout-desktop-column-2);
+    max-inline-size: var(--layout-desktop-column-2);
+    margin-inline-start: auto;
+  }
+
+  .card.taxonomy .title p {
+    line-height: var(--type-lh-compact);
+  }
+
+  /* Meta */
+  .card.taxonomy .meta {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--layout-desktop-column-2);
+    align-items: flex-start;
+    column-gap: var(--layout-desktop-gap);
+    margin-block: 0;
+    padding-block: var(--shape-pad-l) var(--shape-pad-xxl);
+  }
+
+  .card.taxonomy .meta .en {
+    text-align: right;
+  }
+
+  .card.taxonomy .children {
+    flex: 0 0 var(--layout-desktop-column-2);
+    justify-content: flex-start;
+    max-inline-size: var(--layout-desktop-column-2);
+    text-align: left;
+  }
+
+  /* Actions */
+  .card.taxonomy .actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    inline-size: var(--layout-desktop-column-2);
+    margin: 0;
+    text-align: right;
+  }
+
+  .card.taxonomy .actions .more .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--layout-desktop-column-2);
+  }
+}
+
+/*
+  Card Archive
+======================================== */
+.card.archive {
+  --card-py-bottom: var(--layout-section-gap-s);
+  position: relative;
+}
+
+.card.archive:not(:has(+ .card.archive)) {
+  --card-py-bottom: 0;
+}
+
+/* Divider
+----------------- */
+.card.archive::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  border-top: var(--card-divider);
+  pointer-events: none;
+}
+
+/* Head
+----------------- */
+.card.archive > .head {
+  display: flex;
+}
+
+.card.archive > .head .title p {
+  margin-block-end: 0;
+}
+
+/* Stats
+----------------- */
+.card.archive .stats {
+  flex: 0 0 auto;
+  margin-block-start: var(--element-gap-s);
+}
+
+/* Tablet (600px〜1023px)
+---------------------------------------- */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .list-archives .inner > .card.archive:nth-last-child(-n + 2) {
+    --card-py-bottom: 0;
+  }
+
+  .card.archive:nth-child(odd)::before {
+    inset-inline-end: calc(-1 * var(--layout-tablet-gap));
+  }
+
+  .card.archive:last-child:nth-child(2n + 1)::before {
+    inset-inline-end: calc((-1 * 100%) - var(--layout-tablet-gap));
+  }
+}
+
+/* Desktop (1024px〜)
+---------------------------------------- */
+@media (min-width: 1024px) {
+  .list-archives .inner > .card.archive:nth-last-child(-n + 4) {
+    --card-py-bottom: 0;
+  }
+
+  .card.archive:not(:nth-child(4n))::before {
+    inset-inline-end: calc(-1 * var(--layout-desktop-gap));
+  }
+
+  .card.archive:last-child:nth-child(4n + 1)::before {
+    inset-inline-end: calc((-3 * 100%) - (3 * var(--layout-desktop-gap)));
+  }
+
+  .card.archive:last-child:nth-child(4n + 2)::before {
+    inset-inline-end: calc((-2 * 100%) - (2 * var(--layout-desktop-gap)));
+  }
+
+  .card.archive:last-child:nth-child(4n + 3)::before {
+    inset-inline-end: calc((-1 * 100%) - var(--layout-desktop-gap));
+  }
+}
+
+/*
+  Card Client
+======================================== */
+.card.client {
+  --card-py-bottom: var(--layout-section-gap-s);
+}
+
+.card.client:not(:has(+ .card.client)) {
+  --card-py-bottom: 0;
+}
+
+/* Head
+----------------- */
+.card.client > .head {
+  margin-block-end: var(--element-gap-m);
+}
+
+.card.client > .head .title p {
+  margin-block-end: 0;
+}
+
+/* Head: stats / notice */
+.card.client > .head .stats {
+  margin-block-start: var(--element-gap-s);
+}
+
+.card.client > .head .notice {
+  margin-block-start: var(--element-gap-xs);
+  margin-block-end: 0;
+  font-size: var(--type-small-size);
+  line-height: var(--type-lh-tight);
+}
+
+/* Body
+----------------- */
+.card.client > .body {
+  margin-block-start: var(--element-gap-l);
+}
+
+.card.client :where(
+  .body,
+  .body .nav-list,
+  .body .nav-list > li
+) {
+  min-inline-size: 0;
+}
+
+:where(.card.client .body .nav-list) {
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-tight);
+}
+
+.card.client .body :where(
+  .nav-list > li,
+  .nav-list a
+) {
+  max-inline-size: none;
+}
+
+/* Nav list
+----------------- */
+.card.client .body .nav-list > li + li {
+  margin-block: 0;
+}
+
+/* Mobile (〜599px)
+---------------------------------------- */
+@media (max-width: 599px) {
+  .card.client .body .nav-list > li + li {
+    margin-block-start: var(--element-gap-s);
+  }
+}
+
+/* Tablet (600px〜1023px)
+---------------------------------------- */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .card.client .body .nav-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: var(--element-gap-s);
+    column-gap: var(--layout-tablet-gap);
+  }
+}
+
+/* Desktop (1024px〜)
+---------------------------------------- */
+@media (min-width: 1024px) {
+  .card.client {
+    display: flex;
+    align-items: flex-start;
+    column-gap: var(--layout-desktop-gap);
+  }
+
+  /* Head */
+  .card.client > .head {
+    flex: 0 0 var(--layout-desktop-column-4);
+    margin: 0;
+  }
+
+  /* Body */
+  .card.client > .body {
+    flex: 1 1 auto;
+  }
+
+  /* Nav list */
+  .card.client .body .nav-list {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(11, max-content);
+    grid-auto-columns: var(--layout-desktop-column-4);
+    row-gap: var(--element-gap-xs);
+    column-gap: var(--layout-desktop-gap);
+    align-content: start;
+    inline-size: 100%;
+  }
+
+  .card.client .body .nav-list > li {
+    max-inline-size: 100%;
+    margin: 0;
+  }
+
+  .card.client .body .nav-list a {
+    overflow: hidden;
+    max-inline-size: 100%;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    /* line-height:1 (--type-lh-tight, set on .nav-list above) leaves no room
+       below the baseline, so this rule's own overflow:hidden (required for
+       the ellipsis above) was clipping the underline from nor.ui.css's
+       ".card.client .nav-list a:is(:link, :visited)" rule. This bottom
+       padding gives the underline stroke room to render without affecting
+       the ellipsis/nowrap/max-width truncation above. */
+    padding-block-end: var(--optical-2);
+  }
+
+  .card.client .body .nav-list a:hover {
+    text-underline-offset: 0.1em;
+  }
+}

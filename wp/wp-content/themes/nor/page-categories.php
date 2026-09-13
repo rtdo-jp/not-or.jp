@@ -32,12 +32,12 @@
     $category_count = is_array($terms) ? count($terms) : 0;
 
     // Keep admin input plain text; enrich only output semantics.
+    // Hero desc_ja/desc_en are abbr-enriched by default from the common
+    // dictionary (nor_get_abbreviation_map()) when no *_html override is
+    // supplied — no per-page abbr map needed here.
     $landing = nor_get_landing_page_shell_args((int) $page_id, [
       'count' => (int) $category_count,
       'unit' => nor_format_count_unit((int) $category_count, 'category', 'categories', 'listed'),
-      'desc_abbr_map' => [
-        'UI' => 'User Interface',
-      ],
     ]);
     $hero_args = is_array($landing['hero_args'] ?? null) ? $landing['hero_args'] : [];
     $page_h2_ja = (string) ($landing['section_h2_ja'] ?? '—');
@@ -61,7 +61,16 @@
       return nor_get_latest_published_work_for_terms('work_category', [(int) $term_id], true);
     };
 
-    $render_desc = 'nor_render_desc_with_br';
+    // B "Inline rich text": card-taxonomy.php's description paragraphs are
+    // not wrapped in an outer <a> (only the title is), so <a> stays a real
+    // link here. Plain <br> (not the hero's responsive "desktop tablet"
+    // class) to keep the existing line-break layout unchanged.
+    $desc_abbr_map = function_exists('nor_get_abbreviation_map') ? nor_get_abbreviation_map() : [];
+    $render_desc = function (string $raw) use ($desc_abbr_map): string {
+      return function_exists('nor_render_inline_rich_text')
+        ? nor_render_inline_rich_text($raw, $desc_abbr_map, '', false, '<br/>')
+        : nor_render_desc_with_br($raw);
+    };
     // Pages hero (shared): indent output by 2 spaces to match source formatting style.
     echo "\n" . nor_render_template_part('template-parts/hero/hero-pages', null, $hero_args, [
       'trim' => 'left',
@@ -77,7 +86,11 @@
     $i++;
 
     $num = str_pad((string) $i, 2, '0', STR_PAD_LEFT);
-    $jp_desc = $t->description; // built-in Description field (JP)
+    // Raw context: get_terms()'s own ->description can come back through
+    // display-time filtering (which strips markup like <abbr>), so the B
+    // renderer below must start from the actual stored value instead.
+    $jp_desc_raw = get_term_field('description', (int) $t->term_id, $t->taxonomy, 'raw');
+    $jp_desc = is_wp_error($jp_desc_raw) ? '' : (string) $jp_desc_raw;
     $en_desc = nor_get_term_desc_en((int) $t->term_id); // custom meta (EN)
     $projects = $get_projects_count($t->term_id);
     $lu = $get_last_updated($t->term_id);

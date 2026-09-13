@@ -12,7 +12,6 @@
 
     $per_page = nor_get_works_archive_per_page();
     if ($per_page < 1) $per_page = 12;
-    $i = ($paged - 1) * $per_page;
 
     // Hero (pages-common)
     $works_count = (int) ($wp_query->found_posts ?? 0);
@@ -55,10 +54,16 @@
 <?php
       ob_start();
       if (have_posts()) : while (have_posts()) : the_post();
-            $i++;
-            $num = str_pad((string) $i, 3, '0', STR_PAD_LEFT);
-
+            // Works number is each Work's own saved nor_work_no (admin-set,
+            // e.g. from its URL slug's 4-digit segment), not a list-position
+            // sequence -- same source/format as Category/Tag/Client
+            // (template-parts/taxonomy/taxonomy-works-list.php) and the main
+            // Works archive (archive-works.php), so it stays stable across
+            // pagination instead of resetting per page.
             $post_id = (int) get_the_ID();
+            $work_no = (int) get_post_meta($post_id, 'nor_work_no', true);
+            $num = nor_format_seq_no(max(0, $work_no));
+
             $card_data = nor_get_work_card_data($post_id, [
               'client_mode'              => 'taxonomy',
               'clients_limit'            => 4,

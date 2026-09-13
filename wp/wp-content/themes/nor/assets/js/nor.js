@@ -84,7 +84,16 @@ const NorShared = (() => {
       return ok;
     };
 
-    return { get: safeGet, set: safeSet };
+    const safeRemove = () => {
+      for (const getStore of stores) {
+        withStore(getStore, (store) => {
+          store.removeItem(key);
+          return true;
+        }, false);
+      }
+    };
+
+    return { get: safeGet, set: safeSet, remove: safeRemove };
   };
 
   const setButtonVisible = (btn, isVisible) => {
@@ -210,36 +219,55 @@ const NorShared = (() => {
 })();
 
 // ========================================
-// Cookie
+// Cookie / Privacy notice
+// Not a consent-collection mechanism: this only tracks whether the visitor
+// has acknowledged the notice, so it isn't shown again. GA4's firing
+// condition (see header.php) does not read this state.
 // ========================================
 (() => {
-  const KEY = "nor.cookieConsent.v1";
-  const VALUE = "accepted";
-  const SELECTOR_BANNER = ".cookie-agree";
-  const SELECTOR_ACCEPT_BTN = "[data-cookie-accept]";
+  const KEY = "nor.cookieNotice.v1";
+  const VALUE = "acknowledged";
+  const SELECTOR_BANNER = ".cookie-notice";
+  const SELECTOR_ACKNOWLEDGE_BTN = "[data-cookie-acknowledge]";
   const SELECTOR_FALLBACK_BTN = ".btn";
   const SELECTOR_FALLBACK_BUTTON = "button";
+
+  // Legacy key migration: carries a prior "consent"-named key/value over to
+  // the current naming. Safe to keep indefinitely — a no-op once no visitor
+  // has the old key left.
+  const LEGACY_KEY = "nor.cookieConsent.v1";
+  const LEGACY_VALUE = "accepted";
+  const migrateLegacyKey = () => {
+    const current = NorShared.createStorage(KEY);
+    const legacy = NorShared.createStorage(LEGACY_KEY);
+    if (current.get() === null && legacy.get() === LEGACY_VALUE) {
+      current.set(VALUE);
+      legacy.remove();
+    }
+  };
+
+  migrateLegacyKey();
 
   const storage = NorShared.createStorage(KEY);
   const banners = NorShared.qsa(SELECTOR_BANNER);
 
-  const isAccepted = () => storage.get() === VALUE;
+  const isAcknowledged = () => storage.get() === VALUE;
 
   const setAllVisible = (isVisible) => {
     for (const b of banners) b.hidden = !isVisible;
   };
 
-  const getAcceptBtn = (banner) =>
-    banner.querySelector(SELECTOR_ACCEPT_BTN) ||
+  const getAcknowledgeBtn = (banner) =>
+    banner.querySelector(SELECTOR_ACKNOWLEDGE_BTN) ||
     banner.querySelector(SELECTOR_FALLBACK_BTN) ||
     banner.querySelector(SELECTOR_FALLBACK_BUTTON);
 
   const bind = () => {
     for (const b of banners) {
-      const acceptBtn = getAcceptBtn(b);
-      if (!acceptBtn) continue;
+      const acknowledgeBtn = getAcknowledgeBtn(b);
+      if (!acknowledgeBtn) continue;
 
-      acceptBtn.addEventListener("click", () => {
+      acknowledgeBtn.addEventListener("click", () => {
         storage.set(VALUE);
         setAllVisible(false);
       });
@@ -248,7 +276,7 @@ const NorShared = (() => {
 
   const init = () => {
     if (banners.length === 0) return;
-    setAllVisible(!isAccepted());
+    setAllVisible(!isAcknowledged());
     bind();
   };
 
@@ -467,7 +495,7 @@ const NorShared = (() => {
 (() => {
   const SELECTOR_ANCHOR = 'a[href^="#"]';
   const FOCUSABLE_SEL =
-    'input, textarea, select, button, a[href], [tabindex]:not([tabindex="-1"])';
+    'input:not([type="hidden"]), textarea, select, button, a[href], [tabindex]:not([tabindex="-1"])';
 
   const prefersReduced = NorShared.getPrefersReducedMotion();
 
@@ -492,7 +520,7 @@ const NorShared = (() => {
 
     history.pushState(null, "", `#${encodeURIComponent(id)}`);
 
-    const focusTarget = target.matches(FOCUSABLE_SEL)
+    const focusTarget = target.hasAttribute("tabindex") || target.matches(FOCUSABLE_SEL)
       ? target
       : target.querySelector(FOCUSABLE_SEL) || target;
 
@@ -1860,6 +1888,7 @@ const NorShared = (() => {
 (() => {
   const ATTR_TIGHTEN = "data-tighten";
   const ATTR_TIGHTEN_SLOT = "data-tighten-slot";
+  const ATTR_TIGHTEN_EXTRA = "data-tighten-extra";
   const CLASS_COUNT = "count";
   const SELECTOR_COUNT = ".count";
   const SELECTOR_PAGES_H1 = "body.pages h1";
@@ -1874,6 +1903,10 @@ const NorShared = (() => {
     "3.2": 0,
     "4.8": 0,
     "7.2": 2,
+  };
+
+  const COUNT_SLOT_CHAR_EXTRA = {
+    "7.2": { "1": 5 },
   };
 
   const RULES = [
@@ -1906,14 +1939,13 @@ const NorShared = (() => {
     if (!USE_TIGHTEN_PRESET) return {};
 
     return {
-      1: ["A", "I", "X"],
+      1: ["2", "3", "4", "5", "6", "B", "J", "X", "Z"],
       2: [
-        "1", "3", "4", "6", "7", "B", "D", "E", "F", "H", "J", "K",
-        "L", "M", "N", "P", "R", "S", "U", "V", "W", "Y", "Z",
-        "ア", "ニ", "資"
+        "0", "7", "8", "9", "C", "D", "E", "F", "H", "I", "K",
+        "L", "M", "N", "P", "R", "U", "V", "W", "大"
       ],
-      3: ["0", "2", "5", "8", "9", "C", "G", "O", "Q", "T"],
-      5: ["ビ"],
+      3: ["1", "G", "O", "Q", "S", "T", "Y", "ア", "ニ", "資"],
+      6: ["ビ"],
     };
   })();
 
@@ -2024,6 +2056,21 @@ const NorShared = (() => {
     return clampTier(Number(tier) + Number(bias));
   };
 
+  const applyCountSlotCharExtra = (el, firstChar) => {
+    if (!el || !(el instanceof HTMLElement)) return;
+    if (!el.classList.contains(CLASS_COUNT)) return;
+
+    const slot = String(el.getAttribute(ATTR_TIGHTEN_SLOT) || "").trim();
+    const extra = COUNT_SLOT_CHAR_EXTRA[slot]?.[firstChar];
+
+    if (extra === undefined) {
+      el.removeAttribute(ATTR_TIGHTEN_EXTRA);
+      return;
+    }
+
+    el.setAttribute(ATTR_TIGHTEN_EXTRA, String(extra));
+  };
+
   const applyTierFromFirstChar = (el, firstChar) => {
     if (!el || !(el instanceof HTMLElement)) return;
     if (isElementAutoDisabled(el)) return;
@@ -2035,6 +2082,7 @@ const NorShared = (() => {
     const n = Number(mapped);
     if (!Number.isFinite(n)) return;
 
+    applyCountSlotCharExtra(el, firstChar);
     const tier = applyCountSlotBias(el, n);
 
     el.setAttribute(ATTR_TIGHTEN, String(clampTier(tier)));
@@ -2081,9 +2129,14 @@ const NorShared = (() => {
 // Glitch
 // ========================================
 (() => {
+  // Continuous text scrambling is exactly the kind of motion
+  // prefers-reduced-motion exists to suppress; skip setup entirely (not
+  // just the interval) so text stays in its normal, unscrambled state.
+  if (NorShared.getPrefersReducedMotion()) return;
+
   const ATTR_GLITCH = "data-nor-glitch";
   const ATTR_GLITCH_RAN = "data-nor-glitch-ran";
-  const ODDS = 300;
+  const ODDS = 30;
   const HOLD_MS = 160;
   const RESTORE_MS = 860;
   const TICK_MS = 36;
@@ -2295,7 +2348,7 @@ const NorShared = (() => {
 })();
 
 // ========================================
-// Overscroll top / bottom (prototype)
+// Overscroll top / bottom
 // ========================================
 (() => {
   // Kept equal to --motion-duration-s so the CSS fade-back and the class

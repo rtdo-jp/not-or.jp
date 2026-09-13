@@ -12,7 +12,7 @@
   ]);
   $client_count = (!is_wp_error($all_clients) && is_array($all_clients)) ? count($all_clients) : 0;
 
-  // ===== Page meta (Clients: Index of Terms) =====
+  // ===== Page meta (Clients: Index by Initial) =====
   $page_title = '';
   $page_tagline = '';
   $page_desc_ja = '';
@@ -36,7 +36,7 @@
   $page_desc_en = is_string($landing_hero['desc_en'] ?? null) ? (string) $landing_hero['desc_en'] : '';
 
   // ===== Tabs nav (labels from Clients pages) =====
-  $tabs_nav = nor_get_clients_tabs_nav('iot');
+  $tabs_nav = nor_get_clients_tabs_nav('index-by-initial');
 
   // ===== Hero args (pages common) =====
   $hero_args = [
@@ -69,7 +69,7 @@
     'hahifuheho'  => ['label_ja' => 'はひふへほ', 'label_en' => 'ha, hi, fu, he, ho'],
     'mamimumemo'  => ['label_ja' => 'まみむめも', 'label_en' => 'ma, mi, mu, me, mo'],
     'yayuyo'      => ['label_ja' => 'やゆよ', 'label_en' => 'ya, yu, yo'],
-    'waon'        => ['label_ja' => 'わをん', 'label_en' => 'wa, o, n'],
+    'waon'        => ['label_ja' => 'わをん', 'label_en' => 'wa, wo, n'],
     'etc'         => ['label_ja' => 'その他', 'label_en' => 'etc...'],
   ];
 
@@ -168,7 +168,7 @@
           continue;
         }
         $links[] = [
-          'url'   => add_query_arg('from', 'iot', $term_link),
+          'url'   => add_query_arg('from', 'index-by-initial', $term_link),
           'label' => function_exists('nor_get_work_client_list_label')
             ? nor_get_work_client_list_label($t, (string) $t->name)
             : (function_exists('nor_get_term_public_name') ? nor_get_term_public_name($t, (string) $t->name) : (string) $t->name),

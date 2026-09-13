@@ -41,7 +41,7 @@
   --color-tone-danger: #d73945;
   --color-tone-warning: #86742d;
   --color-tone-success: #0c883b;
-  --color-tone-focus: #64dded;
+  --color-tone-focus: #0e7490;
 
   /* Links */
   --color-tone-link-light: #1a0dab;
@@ -211,14 +211,14 @@
   --type-lh-tight: 1;
   --type-lh-compact: 1.2;
   --type-lh-normal: 1.4;
-  --type-lh-relaxed: 1.6;
-  --type-lh-loose: 1.8;
+  --type-lh-relaxed: 1.7;
+  --type-lh-loose: 2;
 
   /*
     Adjust
   ======================================== */
-  --type-lh-adjust-1: 0.48;
-  --type-lh-adjust-2: 0.72;
+  --type-lh-adjust-1: 0.5;
+  --type-lh-adjust-2: 0.68;
 
   /*
     Alias
@@ -232,12 +232,12 @@
 
   /* Card title */
   --type-card-title-size: 2.4rem;
-  --type-card-title-weight: var(--type-weight-light);
+  --type-card-title-weight: var(--type-weight-regular);
   --type-card-title-lh: var(--type-lh-tight);
 
   /* Content title */
   --type-content-title-size: 3.2rem;
-  --type-content-title-weight: var(--type-weight-light);
+  --type-content-title-weight: var(--type-weight-regular);
   --type-content-title-lh: var(--type-lh-compact);
 
   /* Logos */
@@ -250,18 +250,18 @@
 
   /* Counts */
   --type-count-l-size: 7.2rem;
-  --type-count-l-weight: var(--type-weight-light);
+  --type-count-l-weight: var(--type-weight-regular);
   --type-count-l-lh: var(--type-lh-tight);
   --type-count-m-size: 4.8rem;
-  --type-count-m-weight: var(--type-weight-light);
+  --type-count-m-weight: var(--type-weight-regular);
   --type-count-m-lh: var(--type-lh-adjust-2);
 
   /* Visual */
   --type-visual-size: 6.4rem;
-  --type-visual-weight: var(--type-weight-light);
+  --type-visual-weight: var(--type-weight-regular);
   --type-visual-lh: var(--type-lh-tight);
   --type-visual-xl-size: 14.4rem;
-  --type-visual-xl-weight: var(--type-weight-light);
+  --type-visual-xl-weight: var(--type-weight-regular);
   --type-visual-xl-lh: var(--type-lh-tight);
 
   /* ========================================
@@ -312,24 +312,24 @@
     Visual
   ======================================== */
   /* Mobile */
-  --visual-mobile-top-top: -0.8rem;
-  --visual-mobile-bottom-left: -25.2rem;
+  --visual-mobile-top-top: -0.7rem;
+  --visual-mobile-bottom-left: -25.4rem;
   --visual-mobile-bottom-top: 0;
   --visual-mobile-shift-x: 100px;
   --visual-mobile-reach-y: 400px;
 
   /* Tablet */
-  --visual-tablet-top-top: -6.8rem;
-  --visual-tablet-bottom-top: 4.8rem;
-  --visual-tablet-bottom-left: -56.8rem;
+  --visual-tablet-top-top: -6.3rem;
+  --visual-tablet-bottom-top: 4.4rem;
+  --visual-tablet-bottom-left: -57.2rem;
   --visual-tablet-shift-x: 140px;
   --visual-tablet-reach-y: 500px;
 
   /* Desktop */
-  --visual-desktop-top-top: -6.8rem;
-  --visual-desktop-top-left: 13.4rem;
-  --visual-desktop-bottom-top: 4.8rem;
-  --visual-desktop-bottom-left: -1.2rem;
+  --visual-desktop-top-top: -6.3rem;
+  --visual-desktop-top-left: 10.9rem;
+  --visual-desktop-bottom-top: 4.44rem;
+  --visual-desktop-bottom-left: -0.9rem;
   --visual-desktop-shift-x: 200px;
   --visual-desktop-reach-y: 600px;
 
@@ -514,7 +514,6 @@
   --field-message-mark-gap: 0.12em;
   --field-message-mark-gap-multiplier: 7.2;
   --announcement-message-icon-space: 1.4em;
-  --announcement-error-item-py: 0.4em;
 
   /* Containers */
   --container-max: var(--layout-container-mobile);

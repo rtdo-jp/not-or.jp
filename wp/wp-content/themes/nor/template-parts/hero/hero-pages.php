@@ -10,6 +10,7 @@
  * - h1_attrs (array) : optional attributes for the H1 tag (e.g. ['data-tighten-slot' => '3.2'])
  * - tagline (string)
  * - tagline_fallback (string)
+ * - tagline_html (string) : pre-escaped HTML for the tagline (optional)
  * - desc_ja (string)
  * - desc_en (string)
  * - desc_fallback (string) : fallback text for empty desc_ja/desc_en (default `—`)
@@ -36,6 +37,7 @@ $args = wp_parse_args($args, [
   'h1_attrs' => [],
   'tagline' => '',
   'tagline_fallback' => '—',
+  'tagline_html' => '',
   'desc_ja' => '',
   'desc_en' => '',
   'desc_fallback' => '—',
@@ -47,13 +49,13 @@ $args = wp_parse_args($args, [
   'nav_list_aria' => 'Client views',
   'nav_list'      => [
     [
-      'label'   => 'Index of Terms',
-      'url'     => home_url('/clients/iot/'),
+      'label'   => 'Index by Initial',
+      'url'     => home_url('/clients/index-by-initial/'),
       'current' => false,
     ],
     [
-      'label'   => 'Industries',
-      'url'     => home_url('/clients/industries/'),
+      'label'   => 'Index by Industry',
+      'url'     => home_url('/clients/index-by-industry/'),
       'current' => true,
     ],
   ],
@@ -76,6 +78,7 @@ $title_plain = is_string($args['title']) ? trim($args['title']) : '';
 
 $tagline = is_string($args['tagline']) ? trim($args['tagline']) : '';
 $tagline_fallback = is_string($args['tagline_fallback']) ? $args['tagline_fallback'] : '—';
+$tagline_html = is_string($args['tagline_html']) ? trim($args['tagline_html']) : '';
 
 // Optional: wrap plain-title text with an inline tag (e.g. for Work titles).
 // NOTE: Prefer `title_html` when you need markup such as <cite>.
@@ -141,8 +144,13 @@ if ($updated_datetime === '' && $updated_date !== '') {
 
 
 // Helpers
-$render_inline = static function (string $s, string $fallback = ''): string {
-  return nor_render_inline_html($s, $fallback);
+// Plain-text path for tagline / desc_ja / desc_en (used whenever the
+// caller doesn't supply a pre-rendered *_html override): common-dictionary
+// abbr enrichment is applied here uniformly, for every page that uses this
+// hero, so individual callers don't need their own abbr on/off switch.
+$abbr_map = nor_get_abbreviation_map();
+$render_inline = static function (string $s, string $fallback = '') use ($abbr_map): string {
+  return nor_render_inline_with_abbr($s, $fallback, $abbr_map);
 };
 
 // `*_html` args are treated as pre-escaped HTML (caller responsibility).
@@ -183,7 +191,7 @@ if ($title_html !== '') {
     <div class="localize">
       <<?php echo $specific_tag; ?> class="specific">
         <h1<?php echo $h1_attr_html; ?>><?php echo $title_resolved_html; ?></h1>
-        <p class="tagline"><?php echo $render_inline($tagline, $tagline_fallback); ?></p>
+        <p class="tagline"><?php echo ($tagline_html !== '') ? $render_html($tagline_html) : $render_inline($tagline, $tagline_fallback); ?></p>
       </<?php echo $specific_tag; ?>>
       <div class="textpair">
         <p class="ja" lang="ja"><?php echo ($desc_ja_html !== '') ? $render_html($desc_ja_html) : $render_inline($desc_ja, $desc_fallback); ?></p>

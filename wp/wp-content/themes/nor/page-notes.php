@@ -79,7 +79,7 @@
 <?php if ((int) $md_idx > 0) echo "\n"; ?>
           <section class="middle">
             <header class="title">
-              <h4<?php echo $middle_id !== '' ? ' id="' . esc_attr($middle_id) . '"' : ''; ?>><span class="value"><?php echo esc_html($middle_title_en); ?></span></h4>
+              <h4<?php echo $middle_id !== '' ? ' id="' . esc_attr($middle_id) . '"' : ''; ?>><span class="value"><?php echo nor_render_label_with_abbr($middle_title_en); ?></span></h4>
             </header>
             <div class="minor">
 <?php foreach ($items as $item) : ?>

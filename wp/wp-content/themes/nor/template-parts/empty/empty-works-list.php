@@ -34,8 +34,8 @@ if ($secondary_label === '') {
 ?>
 <div class="content empty" role="status">
   <div class="textpair">
-    <p class="ja" lang="ja">「<q><?php echo esc_html($title); ?></q>」に一致する制作記録は見つかりませんでした。<br class="desktop tablet">キーワードで検索するか、「<a href="<?php echo esc_url(home_url('/categories/')); ?>"><i>Categories</i></a>」「<a href="<?php echo esc_url(home_url('/tags/')); ?>"><i>Tags</i></a>」「<a href="<?php echo esc_url(home_url('/archives/')); ?>"><i>Archives</i></a>」「<a href="<?php echo esc_url(home_url('/clients/')); ?>"><i>Clients</i></a>」からお探しください。</p>
-    <p class="en" lang="en">No works found for “<q><?php echo esc_html($title); ?></q>”. <br class="desktop tablet">Try searching, or browse “<a href="<?php echo esc_url(home_url('/categories/')); ?>"><i>Categories</i></a>”, “<a href="<?php echo esc_url(home_url('/tags/')); ?>"><i>Tags</i></a>”, “<a href="<?php echo esc_url(home_url('/archives/')); ?>"><i>Archives</i></a>”, or “<a href="<?php echo esc_url(home_url('/clients/')); ?>"><i>Clients</i></a>”.</p>
+    <p class="ja" lang="ja">「<q><?php echo esc_html($title); ?></q>」に一致する制作記録は見つかりませんでした。<br class="desktop tablet">キーワードで検索するか、「<a href="<?php echo esc_url(home_url('/categories/')); ?>"><i>Categories</i></a>」「<a href="<?php echo esc_url(home_url('/tags/')); ?>"><i>Tags</i></a>」「<a href="<?php echo esc_url(home_url('/archives/')); ?>"><i>Archives</i></a>」「<a href="<?php echo esc_url(home_url('/clients/index-by-initial/')); ?>"><i>Clients</i></a>」からお探しください。</p>
+    <p class="en" lang="en">No works found for “<q><?php echo esc_html($title); ?></q>”. <br class="desktop tablet">Try searching, or browse “<a href="<?php echo esc_url(home_url('/categories/')); ?>"><i>Categories</i></a>”, “<a href="<?php echo esc_url(home_url('/tags/')); ?>"><i>Tags</i></a>”, “<a href="<?php echo esc_url(home_url('/archives/')); ?>"><i>Archives</i></a>”, or “<a href="<?php echo esc_url(home_url('/clients/index-by-initial/')); ?>"><i>Clients</i></a>”.</p>
   </div>
   <ul class="actions">
     <li>

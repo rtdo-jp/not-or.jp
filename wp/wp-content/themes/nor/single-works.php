@@ -132,7 +132,14 @@
     $summary_ja = is_string($summary_ja) ? trim($summary_ja) : '';
 
     if (function_exists('nor_get_work_public_text')) {
-      $tagline = nor_get_work_public_text($post_id, $tagline);
+      // 'mixed' (not the bare default): nor_tagline is a JA/EN-mixed
+      // free-text field, so it alone also needs the client's English-name
+      // aliases layered on top of the usual Japanese masking. See
+      // nor_get_post_work_client_public_name_map()'s docs — this must stay
+      // off the plain 'default' path so it can't leak into $summary_ja
+      // (Excerpt) or the Work title/breadcrumb/JSON-LD name, which are
+      // Japanese-only contexts.
+      $tagline = nor_get_work_public_text($post_id, $tagline, 'mixed');
       $summary_ja = nor_get_work_public_text($post_id, $summary_ja);
       $summary_en = nor_get_work_public_text($post_id, $summary_en, 'en');
     }
@@ -244,7 +251,10 @@
       return [$cap_ja, $cap_en];
     };
 
-    $works_url = get_post_type_archive_link('works');
+    // Home doubles as the Works index (page 1); /works/ itself 301s to Home
+    // (see functions.php template_redirect), so link "back to Works" / the
+    // breadcrumb root directly at Home instead of bouncing through /works/.
+    $works_url = home_url('/');
     $work_public_title = function_exists('nor_get_work_public_title')
       ? nor_get_work_public_title($post_id, (string) get_the_title($post_id))
       : (string) get_the_title($post_id);
@@ -272,8 +282,9 @@
       'unit'  => $work_ordinal_unit,
 
       // Breadcrumbs
+      // Home already doubles as the Works index, so it's the only ancestor
+      // level here (no separate "Works" crumb pointing at /works/).
       'breadcrumbs' => nor_build_breadcrumbs([
-        ['label' => 'Works', 'url' => $works_url],
         [
           'label'      => $work_public_title,
           'current'    => true,
@@ -359,7 +370,7 @@
               <dt>Updated</dt>
               <dd><time datetime="<?php echo esc_attr($updated_dt); ?>" class="value"><?php echo esc_html($updated); ?></time><?php if ($is_new_updated) : ?><span class="new"><small>New</small></span><?php endif; ?></dd>
               <dt>Categories</dt>
-              <dd><?php if (!empty($cats) && !is_wp_error($cats)) : ?><span class="value"><a href="<?php echo esc_url(get_term_link($cats[0])); ?>"><?php echo esc_html($cats[0]->name); ?></a></span><?php else : ?><span class="value">—</span><?php endif; ?></dd>
+              <dd><?php if (!empty($cats) && !is_wp_error($cats)) : ?><span class="value"><a href="<?php echo esc_url(get_term_link($cats[0])); ?>"><?php echo nor_render_work_category_label($cats[0], 'inline'); ?></a></span><?php else : ?><span class="value">—</span><?php endif; ?></dd>
               <dt>Content mode</dt>
               <dd><?php echo esc_html($content_mode_label); ?></dd>
             </dl>
@@ -386,7 +397,7 @@
 <?php if (!empty($primary_type_terms)) : ?>
                   <ul>
 <?php foreach ($primary_type_terms as $t) : ?>
-                    <li><span class="value"><a href="<?php echo esc_url(get_term_link($t)); ?>"><?php echo esc_html($t->name); ?></a></span></li>
+                    <li><span class="value"><a href="<?php echo esc_url(get_term_link($t)); ?>"><?php echo nor_render_label_with_abbr((string) $t->name); ?></a></span></li>
 <?php endforeach; ?>
                   </ul>
 <?php else : ?>
@@ -401,7 +412,7 @@
 <?php if (!empty($tag_groups['roles'])) : ?>
                     <ul>
 <?php foreach (array_slice($tag_groups['roles'], 0, 4) as $t) : ?>
-                      <li><span class="value"><a href="<?php echo esc_url(get_term_link($t)); ?>"><?php echo esc_html($t->name); ?></a></span></li>
+                      <li><span class="value"><a href="<?php echo esc_url(get_term_link($t)); ?>"><?php echo nor_render_label_with_abbr((string) $t->name); ?></a></span></li>
 <?php endforeach; ?>
                     </ul>
 <?php else : ?>
@@ -415,7 +426,7 @@
 <?php if (!empty($tag_groups['tools'])) : ?>
                     <ul>
 <?php foreach (array_slice($tag_groups['tools'], 0, 4) as $t) : ?>
-                      <li><span class="value"><a href="<?php echo esc_url(get_term_link($t)); ?>"><?php echo esc_html($t->name); ?></a></span></li>
+                      <li><span class="value"><a href="<?php echo esc_url(get_term_link($t)); ?>"><?php echo nor_render_work_tag_tool_label($t); ?></a></span></li>
 <?php endforeach; ?>
                     </ul>
 <?php else : ?>
@@ -434,7 +445,7 @@
                   <ul>
 <?php foreach (array_slice($clients, 0, 4) as $t) : ?>
 <?php $client_name = function_exists('nor_get_term_public_name') ? nor_get_term_public_name($t, (string) $t->name) : (string) $t->name; ?>
-                    <li><span class="value"><a href="<?php echo esc_url(get_term_link($t)); ?>"><?php echo esc_html($client_name); ?></a></span></li>
+                    <li><span class="value"><a href="<?php echo esc_url(get_term_link($t)); ?>"><?php echo nor_render_label_with_abbr($client_name); ?></a></span></li>
 <?php endforeach; ?>
                   </ul>
 <?php else : ?>
@@ -448,7 +459,13 @@
 <?php if (!empty($industries) && !is_wp_error($industries)) : ?>
                   <ul>
 <?php foreach (array_slice($industries, 0, 1) as $t) : ?>
-                    <li><span class="value"><a href="<?php echo esc_url(get_term_link($t)); ?>"><?php echo esc_html($t->name); ?></a></span></li>
+<?php
+                      // work_industry's own taxonomy archive is retired (301s to
+                      // /clients/index-by-industry/#client-industry-{slug}); link directly
+                      // at the real destination instead of bouncing through it.
+                      $industry_url = home_url('/clients/index-by-industry/#client-industry-' . $t->slug);
+?>
+                    <li><span class="value"><a href="<?php echo esc_url($industry_url); ?>"><?php echo nor_render_label_with_abbr((string) $t->name); ?></a></span></li>
 <?php endforeach; ?>
                   </ul>
 <?php else : ?>
@@ -507,7 +524,7 @@
       } else {
         $n = (int) $pid;
       }
-      $val = str_pad((string) $n, 3, '0', STR_PAD_LEFT);
+      $val = nor_format_seq_no($n);
       return [$val, '#' . $val];
     };
 
@@ -548,9 +565,31 @@
       $published = get_the_date('Y-m-d', $pid);
       $published_dt = get_the_date('c', $pid);
       $excerpt = get_the_excerpt($pid);
-      $excerpt = is_string($excerpt) ? trim((string) preg_replace('/\s+/u', ' ', $excerpt)) : '';
+      // Raw line breaks are kept intact here (no \s+ collapse) so that
+      // nor_inline_rich_text_apply_abbr_and_breaks() below — the same
+      // pipeline used by the Works Index card — can apply its own
+      // CJK-punctuation-aware line-join rule instead of this call site
+      // flattening every line break to a plain space beforehand.
+      $excerpt = is_string($excerpt) ? trim($excerpt) : '';
       if (function_exists('nor_get_work_public_text')) {
         $excerpt = nor_get_work_public_text($pid, $excerpt);
+      }
+
+      // Same allowlist-sanitize + dictionary-abbr pipeline as Works Index
+      // (template-parts/card/card-works.php), so allowed inline markup
+      // (<abbr>/<a>/<strong>/etc.) renders as real elements here too,
+      // instead of being escaped to literal text by a plain esc_html().
+      if (function_exists('nor_sanitize_inline_rich_text') && function_exists('nor_inline_rich_text_apply_abbr_and_breaks')) {
+        $excerpt_safe = nor_sanitize_inline_rich_text($excerpt);
+        $excerpt_html = ($excerpt_safe !== '')
+          ? nor_inline_rich_text_apply_abbr_and_breaks(
+              $excerpt_safe,
+              function_exists('nor_get_abbreviation_map') ? nor_get_abbreviation_map() : [],
+              false // convert_newlines_to_br = false: join as a single line, not <br>
+            )
+          : '';
+      } else {
+        $excerpt_html = esc_html($excerpt);
       }
 
       [$no_val, $no_label] = $format_work_no($pid);
@@ -570,8 +609,8 @@
             </div>
             <div class="title-summary">
               <h3><cite class="value"><a href="<?php echo esc_url($permalink); ?>"><?php echo esc_html($title); ?></a></cite></h3>
-<?php if ($excerpt !== '') : ?>
-              <p class="ja" lang="ja"><?php echo esc_html($excerpt); ?></p>
+<?php if ($excerpt_html !== '') : ?>
+              <p class="ja" lang="ja"><?php echo $excerpt_html; ?></p>
 <?php else : ?>
               <p class="ja" lang="ja">—</p>
 <?php endif; ?>
@@ -658,8 +697,9 @@
 <?php if (!empty($same_category_ids) && $primary_cat instanceof WP_Term) : ?>
 <?php
   echo nor_render_template_part('template-parts/card/card-related', null, [
-    'title'        => 'Same category',
-    'description'  => 'Other works in ' . $primary_cat->name . '.',
+    'title'            => 'Same category',
+    'description'      => 'Other works in ' . $primary_cat->name . '.',
+    'description_html' => 'Other works in ' . nor_render_label_with_abbr((string) $primary_cat->name) . '.',
     'ids'          => $same_category_ids,
     'render_items' => $render_related_items,
   ], [
@@ -693,8 +733,9 @@
     ? nor_get_term_public_name($primary_client, (string) $primary_client->name)
     : (string) $primary_client->name;
   echo nor_render_template_part('template-parts/card/card-related', null, [
-    'title'        => 'Same client',
-    'description'  => 'Other works for ' . $same_client_label . '.',
+    'title'            => 'Same client',
+    'description'      => 'Other works for ' . $same_client_label . '.',
+    'description_html' => 'Other works for ' . nor_render_label_with_abbr($same_client_label) . '.',
     'ids'          => $same_client_ids,
     'render_items' => $render_related_items,
   ], [

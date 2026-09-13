@@ -62,20 +62,32 @@ get_header();
   $has_writings = $writings_query->have_posts();
 
   if ($has_writings) {
-    $hero_title = 'Writings Index';
+    $hero_title = 'Writings';
     $hero_tagline = (string) $page_meta['tagline'];
     $hero_specific_tag = 'div';
-    $breadcrumb_current = 'Writings Index';
     $section_h2_ja = (string) $page_meta['section_h2_ja'];
     $section_h2_en = (string) $page_meta['section_h2_en'];
   } else {
     $hero_title = 'Writings not found';
     $hero_tagline = 'No records match this view.';
     $hero_specific_tag = 'hgroup';
-    $breadcrumb_current = 'Writings not found';
     $section_h2_ja = '記事一覧：該当なし';
     $section_h2_en = 'No writings found';
   }
+
+  // Breadcrumb: page 1 is a single "Writings" crumb (this page itself is the
+  // list — no separate "index" sub-level, unlike the old fixed structure).
+  // Page 2+ adds the actual paginated page as its own crumb. Matches the
+  // JSON-LD BreadcrumbList in nor_get_header_schema_context()'s
+  // is_page('writings') branch (functions.php).
+  $breadcrumb_items = ($paged > 1)
+    ? [
+        ['label' => 'Writings', 'url' => home_url('/writings/')],
+        ['label' => 'Page ' . $paged, 'current' => true],
+      ]
+    : [
+        ['label' => 'Writings', 'current' => true],
+      ];
 
   $hero_html = nor_render_template_part('template-parts/hero/hero-pages', null, [
     'title'        => $hero_title,
@@ -86,10 +98,7 @@ get_header();
     'count'        => $writings_count,
     'unit'         => nor_format_count_unit($writings_count, 'Writing', 'Writings', 'published'),
     'widget'       => 'none',
-    'breadcrumbs'  => nor_build_breadcrumbs([
-      ['label' => 'Writings', 'url' => home_url('/writings/')],
-      ['label' => $breadcrumb_current, 'current' => true],
-    ]),
+    'breadcrumbs'  => nor_build_breadcrumbs($breadcrumb_items),
   ], [
     'trim' => 'both',
     'indent' => 2,
@@ -135,7 +144,7 @@ get_header();
       $writing_no_raw = get_post_meta($post_id, 'nor_writing_no', true);
       $writing_no_int = is_numeric($writing_no_raw) ? (int) $writing_no_raw : 0;
       if ($writing_no_int > 0) {
-        $num_value = str_pad((string) $writing_no_int, 3, '0', STR_PAD_LEFT);
+        $num_value = nor_format_seq_no($writing_no_int);
         $num_display = '#' . $num_value;
       } else {
         $num_value = '';
@@ -155,12 +164,21 @@ get_header();
       $permalink = get_permalink($post_id);
       $title = get_the_title($post_id);
       $excerpt = get_the_excerpt($post_id);
+      if (is_string($excerpt)) {
+        // CJK-aware single-line collapse. Preserve the existing behavior of
+        // this path, which did not strip HTML tags, so strip_tags is off.
+        // See nor_normalize_single_line_text() in functions.php for the
+        // full rationale.
+        $excerpt = nor_normalize_single_line_text($excerpt, false);
+      } else {
+        $excerpt = '';
+      }
 
       echo '            <li>' . "\n";
       echo '              <div class="index-mode-meta">' . "\n";
       echo '                <ul class="index-mode">' . "\n";
       echo '                  <li><data value="' . esc_attr($num_value) . '">' . esc_html($num_display) . '</data></li>' . "\n";
-      echo '                  <li>' . esc_html($theme) . '</li>' . "\n";
+      echo '                  <li>' . nor_render_writing_theme_label($theme) . '</li>' . "\n";
       echo '                </ul>' . "\n";
       echo '                <ul class="meta">' . "\n";
       echo '                  <li>Published: <time datetime="' . esc_attr($published_dt) . '" class="value">' . esc_html($published_display) . '</time>' . ($is_new ? '<span class="new">New</span>' : '') . '</li>' . "\n";

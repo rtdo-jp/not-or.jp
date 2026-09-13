@@ -45,6 +45,10 @@ $aria_more = isset($args['aria_more']) && is_string($args['aria_more']) ? $args[
 if ($aria_more === '' && $has_term) {
   $aria_more = sprintf('View all works in “%s”', $t->name);
 }
+// Accessible name must contain the visible label ("More") per WCAG 2.5.3
+// Label in Name, regardless of whether $aria_more came from a caller or
+// the default above.
+$aria_more_label = ($aria_more !== '') ? ('More — ' . $aria_more) : 'More';
 
 $render_category_name = $args['render_category_name'] ?? null;
 $render_term_label = $args['render_term_label'] ?? null;
@@ -72,7 +76,7 @@ if ($title_html !== '') {
 } elseif (is_callable($render_category_name) && $has_term) {
   $title_inner_html = (string) call_user_func($render_category_name, $t);
 } elseif ($has_term) {
-  $title_inner_html = '<span class="character-line">' . esc_html((string) $t->name) . '</span>';
+  $title_inner_html = '<span class="character-line">' . nor_render_label_with_abbr((string) $t->name) . '</span>';
 }
 
 $title_node_html = $title_inner_html;
@@ -84,7 +88,7 @@ if ($title_link && $term_url !== '') {
 
 $updated_html = '';
 if ($lu) {
-  $updated_html = 'Last updated:<time datetime="' . esc_attr((string) ($lu['dt'] ?? '')) . '" class="value">' . esc_html((string) ($lu['d'] ?? '')) . '</time>';
+  $updated_html = 'Last updated: <time datetime="' . esc_attr((string) ($lu['dt'] ?? '')) . '" class="value">' . esc_html((string) ($lu['d'] ?? '')) . '</time>';
   if (!empty($lu['is_new'])) {
     $updated_html .= '<span class="new">New</span>';
   }
@@ -127,7 +131,7 @@ if ($lu) {
     if (!$ct || is_wp_error($ct) || !($ct instanceof WP_Term)) continue;
     $u = get_term_link($ct);
     if (is_wp_error($u)) continue;
-    $label = is_callable($render_term_label) ? (string) call_user_func($render_term_label, $ct) : esc_html($ct->name);
+    $label = is_callable($render_term_label) ? (string) call_user_func($render_term_label, $ct) : nor_render_label_with_abbr((string) $ct->name);
     echo '              <li><a href="' . esc_url($u) . '">' . $label . "</a></li>\n";
   }
 ?>
@@ -137,7 +141,7 @@ if ($lu) {
 <?php endif; ?>
         </div>
         <div class="actions">
-          <p class="more"><?php if ($more_disabled || $term_url === '') : ?><span class="btn is-disabled" aria-disabled="true">More</span><?php else : ?><a href="<?php echo esc_url($term_url); ?>" class="btn" aria-label="<?php echo esc_attr($aria_more); ?>">More</a><?php endif; ?></p>
+          <p class="more"><?php if ($more_disabled || $term_url === '') : ?><span class="btn is-disabled" aria-disabled="true">More</span><?php else : ?><a href="<?php echo esc_url($term_url); ?>" class="btn" aria-label="<?php echo esc_attr($aria_more_label); ?>">More</a><?php endif; ?></p>
         </div>
       </div>
     </article>

@@ -111,7 +111,7 @@
             <dt>Updated</dt>
             <dd><time datetime="<?php echo esc_attr($updated_dt); ?>" class="value"><?php echo esc_html($updated); ?></time><?php if ($is_new_updated) : ?><span class="new"><small>New</small></span><?php endif; ?></dd>
             <dt>Theme</dt>
-            <dd><span class="value"><?php echo esc_html($theme); ?></span></dd>
+            <dd><span class="value"><?php echo nor_render_writing_theme_label($theme); ?></span></dd>
           </dl>
         </header>
 
@@ -184,7 +184,7 @@
       $raw = get_post_meta($pid, 'nor_writing_no', true);
       $n = is_numeric($raw) ? (int) $raw : 0;
       if ($n > 0) {
-        $val = str_pad((string) $n, 3, '0', STR_PAD_LEFT);
+        $val = nor_format_seq_no($n);
         return [$val, '#' . $val];
       }
       return ['', '—'];
@@ -207,7 +207,7 @@
             <div class="index-mode-meta">
               <ul class="index-mode">
                 <li><data value="<?php echo esc_attr($no_val); ?>"><?php echo esc_html($no_label); ?></data></li>
-                <li><?php echo esc_html($r_theme); ?></li>
+                <li><?php echo nor_render_writing_theme_label($r_theme); ?></li>
               </ul>
               <ul class="meta">
                 <li>Published: <time datetime="<?php echo esc_attr($r_published_dt); ?>" class="value"><?php echo esc_html($r_published); ?></time><?php if ($r_is_new) : ?><span class="new">New</span><?php endif; ?></li>

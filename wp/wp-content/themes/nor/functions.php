@@ -26,9 +26,11 @@ add_action('init', function () {
   remove_action('wp_head', 'wp_generator');
   remove_action('wp_head', 'rest_output_link_wp_head', 10);
   remove_action('wp_head', 'rsd_link');
-  // Disable core auto-sizes contain inline CSS fix.
-  remove_action('wp_head', 'wp_print_auto_sizes_contain_css_fix');
-  remove_action('wp_enqueue_scripts', 'wp_enqueue_img_auto_sizes_contain_css_fix');
+  // REST API discovery is also advertised via a Link response header on
+  // template_redirect (separate from the wp_head <link> removed above).
+  // The REST API itself (/wp-json/) stays fully enabled; only this
+  // discovery hint is removed.
+  remove_action('template_redirect', 'rest_output_link_header', 11);
   // Disable emoji assets in head/output.
   remove_action('wp_head', 'print_emoji_detection_script', 7);
   remove_action('wp_print_styles', 'print_emoji_styles');
@@ -40,13 +42,55 @@ add_action('init', function () {
   remove_action('wp_body_open', 'wp_global_styles_render_svg_filters');
   // Canonical is rendered by our header.php; prevent duplicate rel=canonical from core.
   remove_action('wp_head', 'rel_canonical');
+  // Masked work_client term archives: core's own feed_links_extra() (still
+  // hooked here unconditionally) reads $term->name directly for this <link
+  // rel="alternate" type="application/rss+xml"> tag's title attribute, with
+  // no filter hook to intercept just that string -- so it leaks the
+  // pre-mask real Client name even though the tag's href (via
+  // get_term_feed_link() -> get_term_link()'s own masking-aware filter) is
+  // already masking-safe. Swapped for a thin wrapper below (same priority)
+  // that substitutes the masking-safe public name only for this one core
+  // call, then restores the original -- every other feed_links_extra() case
+  // (singular, Category, Tag, author, search, post-type archive, and
+  // non-masked work_client) is untouched.
+  remove_action('wp_head', 'feed_links_extra', 3);
+  add_action('wp_head', 'nor_feed_links_extra_with_masked_client_name', 3);
 });
 
-add_action('wp_enqueue_scripts', function () {
-  // Safety net: prevent the inline style block id='wp-img-auto-sizes-contain-inline-css'.
-  wp_dequeue_style('wp-img-auto-sizes-contain');
-  wp_deregister_style('wp-img-auto-sizes-contain');
+/**
+ * Wrapper around core's feed_links_extra() that swaps in the masking-safe
+ * public name for a masked work_client term archive's RSS <link> title only.
+ * See the remove_action/add_action pairing in the 'init' action above.
+ */
+function nor_feed_links_extra_with_masked_client_name(): void {
+  if (function_exists('is_tax') && is_tax('work_client') && function_exists('nor_get_term_public_name')) {
+    global $wp_query;
+    $real_term = get_queried_object();
+    if ($real_term instanceof WP_Term) {
+      $public_name = nor_get_term_public_name($real_term, (string) $real_term->name);
+      if ($public_name !== '' && $public_name !== $real_term->name) {
+        $masked_term = clone $real_term;
+        $masked_term->name = $public_name;
+        $wp_query->queried_object = $masked_term;
+        try {
+          feed_links_extra();
+        } finally {
+          $wp_query->queried_object = $real_term;
+        }
+        return;
+      }
+    }
+  }
+  feed_links_extra();
+}
 
+// nør. does not use pingbacks/trackbacks. Forces pings_open() false everywhere
+// (pingback.ping, wp-trackback.php, and the X-Pingback header all read it),
+// independent of each post's stored ping_status. Comment functionality
+// (comments_open()) is untouched.
+add_filter('pings_open', '__return_false');
+
+add_action('wp_enqueue_scripts', function () {
   // This site renders from custom fields/templates only, so block/theme global CSS is unnecessary.
   // Removes:
   // - wp-block-library-inline-css
@@ -164,43 +208,7 @@ function nor_about_allowed_html(): array {
   if (function_exists('nor_notes_allowed_html')) {
     return nor_notes_allowed_html();
   }
-  if (function_exists('nor_policies_allowed_html')) {
-    return nor_policies_allowed_html();
-  }
-
-  $allowed = wp_kses_allowed_html('post');
-  if (!is_array($allowed)) $allowed = [];
-
-  if (!isset($allowed['a']) || !is_array($allowed['a'])) $allowed['a'] = [];
-  $allowed['a']['target'] = true;
-  $allowed['a']['rel'] = true;
-  $allowed['a']['class'] = true;
-
-  if (!isset($allowed['abbr']) || !is_array($allowed['abbr'])) $allowed['abbr'] = [];
-  $allowed['abbr']['title'] = true;
-
-  if (!isset($allowed['code']) || !is_array($allowed['code'])) $allowed['code'] = [];
-  $allowed['code']['class'] = true;
-
-  if (!isset($allowed['br']) || !is_array($allowed['br'])) $allowed['br'] = [];
-  $allowed['br']['class'] = true;
-
-  if (!isset($allowed['span']) || !is_array($allowed['span'])) $allowed['span'] = [];
-  $allowed['span']['class'] = true;
-  $allowed['span']['lang'] = true;
-
-  if (!isset($allowed['div']) || !is_array($allowed['div'])) $allowed['div'] = [];
-  $allowed['div']['class'] = true;
-  $allowed['div']['lang'] = true;
-
-  if (!isset($allowed['li']) || !is_array($allowed['li'])) $allowed['li'] = [];
-  $allowed['li']['class'] = true;
-
-  if (!isset($allowed['time']) || !is_array($allowed['time'])) $allowed['time'] = [];
-  $allowed['time']['datetime'] = true;
-  $allowed['time']['class'] = true;
-
-  return $allowed;
+  return nor_policies_allowed_html();
 }
 
 function nor_sanitize_about_rich_html(string $raw): string {
@@ -279,6 +287,222 @@ function nor_render_inline_with_abbr(string $raw, string $fallback = '', array $
   $lines = explode("\n", $safe);
   $rendered = array_map($render_line, $lines);
   return implode('<br class="desktop tablet">', $rendered);
+}
+
+/**
+ * ========================================
+ * B. Inline rich text — shared allowlist/sanitize/render
+ * ========================================
+ * A single, short list of tags for short free-text fields (taglines,
+ * summaries): abbr/dfn(title), i/em/strong/code/cite/br, and a (href/
+ * title/target/rel). No class/style/id/event attributes, no block-level
+ * tags. Save-time and render-time both call nor_sanitize_inline_rich_text(),
+ * which wraps this same allowlist, so "what admins can type" and "what gets
+ * stored/shown" never drift apart.
+ */
+if (!function_exists('nor_inline_rich_text_allowed_html')) {
+  function nor_inline_rich_text_allowed_html(): array {
+    return [
+      'a'      => ['href' => true, 'title' => true, 'target' => true, 'rel' => true],
+      'abbr'   => ['title' => true],
+      'i'      => [],
+      'em'     => [],
+      'strong' => [],
+      'code'   => [],
+      'br'     => [],
+      'cite'   => [],
+      'dfn'    => ['title' => true],
+    ];
+  }
+}
+
+if (!function_exists('nor_sanitize_inline_rich_text')) {
+  function nor_sanitize_inline_rich_text(string $raw): string {
+    $raw = trim($raw);
+    if ($raw === '') return '';
+    $raw = (string) wp_check_invalid_utf8($raw, true);
+    return trim((string) wp_kses($raw, nor_inline_rich_text_allowed_html()));
+  }
+}
+
+if (!function_exists('nor_inline_rich_text_unwrap_links')) {
+  /**
+   * Card/list contexts wrap the whole card in a single <a>, so a stored <a>
+   * inside inline rich text would create a nested anchor. Re-runs wp_kses()
+   * with the same allowlist minus 'a' — wp_kses drops a disallowed tag but
+   * keeps its text/child content, so "Policiesを見る" survives with only
+   * the link markup removed. No second allowlist is hand-maintained.
+   */
+  function nor_inline_rich_text_unwrap_links(string $safe_html): string {
+    if ($safe_html === '' || strpos($safe_html, '<a') === false) return $safe_html;
+    $allowed = nor_inline_rich_text_allowed_html();
+    unset($allowed['a']);
+    return (string) wp_kses($safe_html, $allowed);
+  }
+}
+
+if (!function_exists('nor_inline_rich_text_apply_abbr_and_breaks')) {
+  /**
+   * Applies dictionary-based auto-<abbr> wrapping and newline handling to
+   * already-sanitized inline rich text, touching only text nodes: explicit
+   * <abbr>/<a>/<strong>/etc. typed by an admin are never re-parsed, and text
+   * nodes inside an existing <abbr> or <code> are left alone (no nested
+   * <abbr>, no abbr-ifying code samples). $convert_newlines_to_br=false
+   * collapses line breaks to a single space instead, for single-line
+   * card/list contexts. $br_html lets callers reuse a different line-break
+   * marker than the Works/Writings hero's responsive
+   * '<br class="desktop tablet">' (e.g. a plain '<br>' where that class's
+   * existing CSS/layout behavior isn't wanted) without affecting existing
+   * callers, which all keep the default.
+   */
+  function nor_inline_rich_text_apply_abbr_and_breaks(string $safe_html, array $abbr_map = [], bool $convert_newlines_to_br = true, string $br_html = '<br class="desktop tablet"/>'): string {
+    if ($safe_html === '') return '';
+    if (!class_exists('DOMDocument')) return $safe_html;
+
+    $map = [];
+    foreach ($abbr_map as $token => $title) {
+      $t = trim((string) $token);
+      if ($t === '') continue;
+      $map[$t] = (string) $title;
+    }
+    $tokens = array_keys($map);
+    usort($tokens, static function ($a, $b): int {
+      return strlen((string) $b) <=> strlen((string) $a);
+    });
+
+    $pattern = '';
+    if (!empty($tokens)) {
+      $parts = [];
+      foreach ($tokens as $token) {
+        $parts[] = '(?<![A-Za-z0-9])' . preg_quote($token, '/') . '(?![A-Za-z0-9])';
+      }
+      $candidate = '/' . implode('|', $parts) . '/u';
+      if (@preg_match($candidate, '') !== false) {
+        $pattern = $candidate;
+      }
+    }
+
+    if ($pattern === '' && strpos($safe_html, "\n") === false) {
+      return $safe_html;
+    }
+
+    $prev = libxml_use_internal_errors(true);
+    $dom = new DOMDocument();
+    $loaded = $dom->loadHTML('<?xml encoding="utf-8" ?><div id="nor-inline-rich-wrap">' . $safe_html . '</div>');
+    libxml_clear_errors();
+    libxml_use_internal_errors($prev);
+
+    if (!$loaded) return $safe_html;
+
+    $xpath = new DOMXPath($dom);
+    $wrap_nodes = $xpath->query('//*[@id="nor-inline-rich-wrap"]');
+    if ($wrap_nodes === false || $wrap_nodes->length === 0) return $safe_html;
+    $wrap = $wrap_nodes->item(0);
+
+    $text_nodes = [];
+    foreach ($xpath->query('.//text()', $wrap) as $node) {
+      $text_nodes[] = $node;
+    }
+
+    foreach ($text_nodes as $text_node) {
+      $text = (string) $text_node->nodeValue;
+      if ($text === '') continue;
+
+      $skip_abbr = false;
+      if ($pattern !== '') {
+        $ancestor_hit = $xpath->query('ancestor::abbr | ancestor::code', $text_node);
+        $skip_abbr = ($ancestor_hit !== false && $ancestor_hit->length > 0);
+      }
+
+      $node_has_match = ($pattern !== '' && !$skip_abbr && preg_match($pattern, $text) === 1);
+      $node_has_newline = (strpos($text, "\n") !== false);
+      if (!$node_has_match && !$node_has_newline) continue;
+
+      $lines = explode("\n", $text);
+      $line_xml = [];
+      $line_texts = [];
+      foreach ($lines as $line) {
+        if (!$convert_newlines_to_br) {
+          $line = trim((string) preg_replace('/[ \t]+/u', ' ', $line));
+        }
+        $line_texts[] = $line;
+        if ($line === '') {
+          $line_xml[] = '';
+          continue;
+        }
+        if ($pattern === '' || $skip_abbr || !preg_match($pattern, $line)) {
+          $line_xml[] = esc_html($line);
+          continue;
+        }
+        $out = '';
+        $offset = 0;
+        if (preg_match_all($pattern, $line, $matches, PREG_OFFSET_CAPTURE)) {
+          foreach ($matches[0] as $m) {
+            $token = (string) ($m[0] ?? '');
+            $pos   = (int) ($m[1] ?? 0);
+            if ($token === '' || $pos < $offset) continue;
+            $out .= esc_html(substr($line, $offset, $pos - $offset));
+            $title = $map[$token] ?? '';
+            $out  .= '<abbr title="' . esc_attr($title) . '">' . esc_html($token) . '</abbr>';
+            $offset = $pos + strlen($token);
+          }
+        }
+        $out .= esc_html(substr($line, $offset));
+        $line_xml[] = $out;
+      }
+
+      if ($convert_newlines_to_br) {
+        $replacement_xml = implode($br_html, $line_xml);
+      } else {
+        // A CJK punctuation mark (U+3000-U+303F -- e.g. the Japanese period
+        // and comma) already provides its own sentence-final spacing, so no
+        // space is inserted right after one, regardless of what the next
+        // line starts with -- matching the rule already applied to
+        // Description/Title normalization elsewhere. Every other line
+        // boundary keeps the previous single-space join.
+        $replacement_xml = '';
+        foreach ($line_xml as $i => $chunk) {
+          if ($i > 0) {
+            $prev_line = $line_texts[$i - 1];
+            $ends_with_cjk_punct = (preg_match('/[\x{3000}-\x{303F}]$/u', $prev_line) === 1);
+            $replacement_xml .= $ends_with_cjk_punct ? '' : ' ';
+          }
+          $replacement_xml .= $chunk;
+        }
+      }
+
+      $fragment = $dom->createDocumentFragment();
+      if (@$fragment->appendXML($replacement_xml)) {
+        $text_node->parentNode->replaceChild($fragment, $text_node);
+      }
+    }
+
+    $out_html = '';
+    foreach (iterator_to_array($wrap->childNodes) as $child) {
+      $out_html .= (string) $dom->saveHTML($child);
+    }
+
+    return $out_html;
+  }
+}
+
+if (!function_exists('nor_render_inline_rich_text')) {
+  /**
+   * Renders a B "Inline rich text" field: re-applies the same allowlist used
+   * at save time (defense in depth against any future save path that skips
+   * nor_sanitize_inline_rich_text()), optionally unwraps <a> for card/list
+   * contexts, then applies dictionary auto-<abbr> + newline handling.
+   */
+  function nor_render_inline_rich_text(string $raw, array $abbr_map = [], string $fallback = '', bool $card_context = false, string $br_html = '<br class="desktop tablet"/>'): string {
+    $safe = nor_sanitize_inline_rich_text($raw);
+    if ($safe === '') {
+      return ($fallback !== '') ? esc_html($fallback) : '';
+    }
+    if ($card_context) {
+      $safe = nor_inline_rich_text_unwrap_links($safe);
+    }
+    return nor_inline_rich_text_apply_abbr_and_breaks($safe, $abbr_map, !$card_context, $br_html);
+  }
 }
 
 /**
@@ -385,6 +609,396 @@ function nor_render_desc_with_br($raw): string {
 }
 
 /**
+ * Initial abbreviation set. Used only once, by nor_maybe_seed_abbreviations()
+ * below, to seed `nor_abbreviations` the first time it's needed. Not a
+ * runtime fallback — nor_get_abbreviation_map() reads only what is
+ * actually stored.
+ */
+function nor_get_default_abbreviation_map(): array {
+  return [
+    'UI'   => 'User Interface',
+    'UX'   => 'User Experience',
+    'HTML' => 'HyperText Markup Language',
+    'CSS'  => 'Cascading Style Sheets',
+    'JS'   => 'JavaScript',
+    'PHP'  => 'Hypertext Preprocessor',
+  ];
+}
+
+/**
+ * One-time migration: if `nor_abbreviations` has never held real data
+ * (missing, or currently an empty array from the earlier save bug), seed
+ * it with the initial set so the admin screen and DB agree from the start.
+ * Guarded by `nor_abbreviations_initialized` so this never re-seeds after
+ * an admin intentionally empties the dictionary later.
+ */
+if (!function_exists('nor_maybe_seed_abbreviations')) {
+  function nor_maybe_seed_abbreviations(): void {
+    if (get_option('nor_abbreviations_initialized', false)) return;
+
+    $stored = get_option('nor_abbreviations', null);
+    if (!is_array($stored) || empty($stored)) {
+      update_option('nor_abbreviations', nor_get_default_abbreviation_map());
+    }
+
+    update_option('nor_abbreviations_initialized', 1);
+  }
+}
+add_action('after_setup_theme', 'nor_maybe_seed_abbreviations');
+
+/**
+ * Additional abbreviation set to merge into whatever is already stored
+ * (SEO/LLMO, OGP, Core Web Vitals terms, image formats, etc.). Used only
+ * once, by nor_maybe_merge_additional_abbreviations_v2() below.
+ */
+function nor_get_additional_abbreviation_map_v2(): array {
+  return [
+    'LLMO'    => 'Large Language Model Optimization',
+    'OGP'     => 'Open Graph Protocol',
+    'RSS'     => 'Really Simple Syndication',
+    'JSON-LD' => 'JavaScript Object Notation for Linked Data',
+    'TLS'     => 'Transport Layer Security',
+    'DV'      => 'Domain Validation',
+    'HTTPS'   => 'Hypertext Transfer Protocol Secure',
+    'HTTP/2'  => 'Hypertext Transfer Protocol Version 2',
+    'AMP'     => 'Accelerated Mobile Pages',
+    'PWA'     => 'Progressive Web App',
+    'JPEG'    => 'Joint Photographic Experts Group',
+    'PNG'     => 'Portable Network Graphics',
+    'SVG'     => 'Scalable Vector Graphics',
+    'WCAG'    => 'Web Content Accessibility Guidelines',
+    'LCP'     => 'Largest Contentful Paint',
+    'CLS'     => 'Cumulative Layout Shift',
+    'INP'     => 'Interaction to Next Paint',
+    'ARIA'    => 'Accessible Rich Internet Applications',
+    'CSP'     => 'Content Security Policy',
+    'JST'     => 'Japan Standard Time',
+  ];
+}
+
+/**
+ * One-time migration: merge the additional abbreviation set above into
+ * whatever `nor_abbreviations` currently holds, without touching, removing,
+ * or reordering any existing entry. Existing entries always win on a key
+ * collision (PHP's array `+` union keeps the left operand's value for
+ * shared keys) — this only ever adds tokens that are genuinely missing.
+ * Guarded by its own flag so it runs exactly once, independent of
+ * `nor_abbreviations_initialized` above (which guards the original 6-entry
+ * seed and must not be reused here, or this merge would never run on an
+ * already-initialized site).
+ */
+if (!function_exists('nor_maybe_merge_additional_abbreviations_v2')) {
+  function nor_maybe_merge_additional_abbreviations_v2(): void {
+    if (get_option('nor_abbreviations_merged_v2', false)) return;
+
+    $stored = get_option('nor_abbreviations', []);
+    if (!is_array($stored)) $stored = [];
+
+    $merged = $stored + nor_get_additional_abbreviation_map_v2();
+    update_option('nor_abbreviations', $merged);
+
+    update_option('nor_abbreviations_merged_v2', 1);
+  }
+}
+add_action('after_setup_theme', 'nor_maybe_merge_additional_abbreviations_v2');
+
+/**
+ * One-time fix: the 'DB' entry's expansion was stored as "DataBase" and
+ * should read "Database". Only touches the value for the exact key 'DB'
+ * when it currently equals "DataBase" — a no-op otherwise (e.g. if the key
+ * or value differs from this exact assumption, nothing changes). Every
+ * other entry, including anything else that happens to look similar, is
+ * left untouched. Guarded by its own flag so it runs exactly once.
+ */
+if (!function_exists('nor_maybe_fix_db_abbreviation_expansion')) {
+  function nor_maybe_fix_db_abbreviation_expansion(): void {
+    if (get_option('nor_abbreviations_db_fixed_v1', false)) return;
+
+    $stored = get_option('nor_abbreviations', []);
+    if (
+      is_array($stored)
+      && array_key_exists('DB', $stored)
+      && trim((string) $stored['DB']) === 'DataBase'
+    ) {
+      $stored['DB'] = 'Database';
+      update_option('nor_abbreviations', $stored);
+    }
+
+    update_option('nor_abbreviations_db_fixed_v1', 1);
+  }
+}
+add_action('after_setup_theme', 'nor_maybe_fix_db_abbreviation_expansion');
+
+/**
+ * Site-wide abbreviation dictionary getter.
+ * Thin read of the `nor_abbreviations` option — what's stored is what's
+ * shown everywhere. No default/fallback resolution (see
+ * nor_maybe_seed_abbreviations() for the one-time initial seed).
+ */
+function nor_get_abbreviation_map(): array {
+  $stored = get_option('nor_abbreviations', []);
+  if (!is_array($stored)) return [];
+
+  $map = [];
+  foreach ($stored as $token => $title) {
+    $t = trim((string) $token);
+    $v = trim((string) $title);
+    if ($t === '' || $v === '') continue;
+    $map[$t] = $v;
+  }
+  return $map;
+}
+
+add_action('admin_init', function () {
+  register_setting('nor_abbreviations_options', 'nor_abbreviations', [
+    'type'              => 'array',
+    'sanitize_callback' => 'nor_sanitize_abbreviations_option',
+    'default'           => [],
+  ]);
+});
+
+add_action('admin_menu', function () {
+  add_options_page(
+    'abbr辞書',
+    'abbr辞書',
+    'manage_options',
+    'nor-abbreviations',
+    'nor_render_abbreviations_settings_page'
+  );
+});
+
+/**
+ * Sanitize callback for the `nor_abbreviations` option.
+ * Accepts either shape so re-sanitizing an already-sanitized value is a
+ * no-op (idempotent: sanitize(sanitize($x)) === sanitize($x)):
+ * - row-indexed form input: [ N => ['abbr' => ..., 'full' => ...], ... ]
+ *   (matches `nor_abbreviations[N][abbr]` / `nor_abbreviations[N][full]`
+ *   rendered by nor_render_abbreviations_settings_page())
+ * - already-normalized map: [ 'UI' => 'User Interface', ... ]
+ * Rows/entries missing either side are dropped silently (incomplete data).
+ * Duplicate abbreviations keep the first occurrence and surface a
+ * settings-page warning via add_settings_error(). This page is registered
+ * under Settings (options-general.php as parent), so admin-header.php's
+ * options-head.php already calls settings_errors() once for us — we don't
+ * call it ourselves and don't need to dedupe anything here.
+ */
+if (!function_exists('nor_sanitize_abbreviations_option')) {
+  function nor_sanitize_abbreviations_option($raw): array {
+    if (!is_array($raw)) return [];
+
+    $map = [];
+    $duplicates = [];
+
+    foreach ($raw as $key => $row) {
+      if (is_array($row)) {
+        $abbr = isset($row['abbr']) ? trim(sanitize_text_field((string) $row['abbr'])) : '';
+        $full = isset($row['full']) ? trim(sanitize_text_field((string) $row['full'])) : '';
+      } else {
+        $abbr = trim(sanitize_text_field((string) $key));
+        $full = trim(sanitize_text_field((string) $row));
+      }
+
+      if ($abbr === '' || $full === '') continue;
+
+      if (array_key_exists($abbr, $map)) {
+        $duplicates[$abbr] = true;
+        continue;
+      }
+
+      $map[$abbr] = $full;
+    }
+
+    if (!empty($duplicates)) {
+      add_settings_error(
+        'nor_abbreviations',
+        'nor_abbreviations_duplicate',
+        '重複した略語がありました（' . implode(', ', array_keys($duplicates)) . '）。先に入力された行を優先し、以降の重複行は無視しました。',
+        'warning'
+      );
+    }
+
+    return $map;
+  }
+}
+
+if (!function_exists('nor_render_abbreviations_settings_page')) {
+  function nor_render_abbreviations_settings_page(): void {
+    if (!current_user_can('manage_options')) return;
+
+    $stored = nor_get_abbreviation_map();
+    $rows = [];
+    foreach ($stored as $abbr => $full) {
+      $rows[] = ['abbr' => (string) $abbr, 'full' => (string) $full];
+    }
+    ?>
+    <div class="wrap">
+      <h1>abbr辞書</h1>
+      <p>サイト内で使用する略語と正式名称（Full form）を管理します。ここで設定した内容は、Works のカテゴリー／タグや Writings の Theme 表示など、サイト各所の <code>&lt;abbr&gt;</code> 表示に反映されます。</p>
+      <p class="description">「削除」を押した行は保存時に辞書から取り除かれます。Abbreviation・Full form のどちらかが空欄の行は保存されません。</p>
+      <form method="post" action="options.php" id="nor-abbr-form">
+        <?php settings_fields('nor_abbreviations_options'); ?>
+        <p>
+          <button type="button" class="button" id="nor-abbr-add-row">＋ 項目を追加</button>
+        </p>
+        <p id="nor-abbr-sort-view">
+          <strong>表示順：</strong>
+          <label><input type="radio" name="nor-abbr-sort-view-radio" value="registered" checked> 登録順</label>
+          <label style="margin-left:12px;"><input type="radio" name="nor-abbr-sort-view-radio" value="name"> 名称順</label>
+          <span class="description" style="margin-left:8px;">（画面上の表示順のみ切り替えます。保存されるデータの順序は変わりません）</span>
+        </p>
+        <?php submit_button('', 'primary', 'submit_top'); ?>
+        <table class="widefat striped" id="nor-abbr-table" style="max-width:720px;">
+          <thead>
+            <tr>
+              <th>Abbreviation</th>
+              <th>Full form</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="nor-abbr-rows">
+            <?php foreach ($rows as $i => $row): ?>
+              <tr data-order-index="<?php echo (int) $i; ?>">
+                <td><input type="text" class="regular-text" name="nor_abbreviations[<?php echo (int) $i; ?>][abbr]" value="<?php echo esc_attr($row['abbr']); ?>"></td>
+                <td><input type="text" class="regular-text" name="nor_abbreviations[<?php echo (int) $i; ?>][full]" value="<?php echo esc_attr($row['full']); ?>"></td>
+                <td><button type="button" class="button nor-abbr-remove-row">削除</button></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+        <?php submit_button(); ?>
+      </form>
+    </div>
+    <script>
+    (function () {
+      var addBtn = document.getElementById('nor-abbr-add-row');
+      var rowsBody = document.getElementById('nor-abbr-rows');
+      var form = document.getElementById('nor-abbr-form');
+      var sortViewEl = document.getElementById('nor-abbr-sort-view');
+      if (!addBtn || !rowsBody) return;
+
+      var nextIndex = rowsBody.querySelectorAll('tr').length;
+      // Newly added rows are prepended to the top (existing behavior) and
+      // must always sort before every pre-existing row in "登録順" view, so
+      // they get a descending (negative) order-index rather than continuing
+      // the ascending sequence used for server-rendered rows.
+      var nextNewOrderIndex = -1;
+
+      addBtn.addEventListener('click', function () {
+        var tr = document.createElement('tr');
+        tr.setAttribute('data-order-index', String(nextNewOrderIndex));
+        nextNewOrderIndex--;
+
+        var abbrTd = document.createElement('td');
+        var abbrInput = document.createElement('input');
+        abbrInput.type = 'text';
+        abbrInput.className = 'regular-text';
+        abbrInput.name = 'nor_abbreviations[' + nextIndex + '][abbr]';
+        abbrTd.appendChild(abbrInput);
+
+        var fullTd = document.createElement('td');
+        var fullInput = document.createElement('input');
+        fullInput.type = 'text';
+        fullInput.className = 'regular-text';
+        fullInput.name = 'nor_abbreviations[' + nextIndex + '][full]';
+        fullTd.appendChild(fullInput);
+
+        var actionTd = document.createElement('td');
+        var removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'button nor-abbr-remove-row';
+        removeBtn.textContent = '削除';
+        actionTd.appendChild(removeBtn);
+
+        tr.appendChild(abbrTd);
+        tr.appendChild(fullTd);
+        tr.appendChild(actionTd);
+        rowsBody.insertBefore(tr, rowsBody.firstChild);
+
+        nextIndex++;
+        abbrInput.focus();
+      });
+
+      rowsBody.addEventListener('click', function (e) {
+        var btn = e.target.closest ? e.target.closest('.nor-abbr-remove-row') : null;
+        if (!btn) return;
+        var tr = btn.closest('tr');
+        if (tr) tr.remove();
+      });
+
+      // Display-order toggle (登録順 / 名称順). Purely a client-side re-
+      // ordering of the existing <tr> elements — inputs keep their name/
+      // value, so editing/removing after switching still works, and the
+      // saved option order is unaffected (see the submit handler below,
+      // which always restores 登録順 before the form is actually posted).
+      if (sortViewEl) {
+        var collator = (window.Intl && Intl.Collator)
+          ? new Intl.Collator('ja-JP', { numeric: true, sensitivity: 'base' })
+          : null;
+
+        var sortRows = function (mode) {
+          var rows = Array.prototype.slice.call(rowsBody.querySelectorAll('tr'));
+          rows.sort(function (a, b) {
+            if (mode === 'name') {
+              var aInput = a.querySelector('input[name$="[abbr]"]');
+              var bInput = b.querySelector('input[name$="[abbr]"]');
+              var aVal = aInput ? aInput.value : '';
+              var bVal = bInput ? bInput.value : '';
+              if (collator) return collator.compare(aVal, bVal);
+              return aVal.localeCompare(bVal, 'ja-JP');
+            }
+            var aOrder = parseInt(a.getAttribute('data-order-index'), 10);
+            var bOrder = parseInt(b.getAttribute('data-order-index'), 10);
+            if (isNaN(aOrder)) aOrder = 0;
+            if (isNaN(bOrder)) bOrder = 0;
+            return aOrder - bOrder;
+          });
+          rows.forEach(function (tr) { rowsBody.appendChild(tr); });
+        };
+
+        sortViewEl.addEventListener('change', function (e) {
+          var target = e.target;
+          if (!target || target.name !== 'nor-abbr-sort-view-radio') return;
+          sortRows(target.value);
+        });
+
+        if (form) {
+          form.addEventListener('submit', function () {
+            // Whatever the admin was viewing, the posted field order must
+            // always match 登録順 so the stored option order never changes
+            // as a side effect of browsing in 名称順.
+            sortRows('registered');
+          });
+        }
+      }
+    })();
+    </script>
+    <?php
+  }
+}
+
+/**
+ * Render Writings "Theme" label (work_category-like plain string) with
+ * common-dictionary abbr enrichment. Non-linked; uses the shared
+ * nor_render_inline_with_abbr() engine, no new HTML replacement logic.
+ */
+function nor_render_writing_theme_label(string $theme): string {
+  return nor_render_inline_with_abbr($theme, '', nor_get_abbreviation_map());
+}
+
+/**
+ * Generic "managed short text" abbr wrapper: plain text in, safe HTML out,
+ * with any token present in the common abbreviation dictionary wrapped in
+ * <abbr>. For breadcrumb labels, H1/title strings, taxonomy/client/role/
+ * tool/site-type labels, and similar single-line admin-controlled text —
+ * anywhere the dedicated taxonomy formatters (nor_render_work_category_label,
+ * nor_render_work_tag_tool_label) don't already own the markup. Not for
+ * free-form content (Writing post_content, etc.).
+ */
+function nor_render_label_with_abbr(string $text): string {
+  return nor_render_inline_with_abbr($text, '', nor_get_abbreviation_map());
+}
+
+/**
  * Render work_category label HTML with optional context.
  *
  * Context:
@@ -405,9 +1019,15 @@ function nor_render_work_category_label($term, string $context = 'inline'): stri
   $is_video = ($slug === 'video-production') || (str_contains($slug, 'video') && str_contains($slug, 'production'));
   $is_presentations_documents = ($slug === 'presentations-documents') || (str_contains($slug, 'presentations') && str_contains($slug, 'documents'));
 
+  if ($is_ui_ux) {
+    $abbr_map = nor_get_abbreviation_map();
+    $ui_html = isset($abbr_map['UI']) ? ('<abbr title="' . esc_attr($abbr_map['UI']) . '">UI</abbr>') : 'UI';
+    $ux_html = isset($abbr_map['UX']) ? ('<abbr title="' . esc_attr($abbr_map['UX']) . '">UX</abbr>') : 'UX';
+  }
+
   if ($ctx === 'card') {
     if ($is_ui_ux) {
-      return '<span class="character-line"><abbr title="User Interface">UI</abbr>/<abbr title="User Experience">UX</abbr></span>';
+      return '<span class="character-line">' . $ui_html . '/' . $ux_html . '</span>';
     }
     if ($is_video) {
       return '<span class="character-line">Video </span><span class="character-line">Production</span>';
@@ -415,40 +1035,44 @@ function nor_render_work_category_label($term, string $context = 'inline'): stri
     if ($is_presentations_documents) {
       return '<span class="character-line">Presentations &amp; </span><span class="character-line">Documents</span>';
     }
-    return '<span class="character-line">' . esc_html($name) . '</span>';
+    return '<span class="character-line">' . nor_render_label_with_abbr($name) . '</span>';
   }
 
   if ($is_ui_ux) {
-    return '<abbr title="User Interface">UI</abbr>/<abbr title="User Experience">UX</abbr>';
+    return $ui_html . '/' . $ux_html;
   }
   if ($is_presentations_documents) {
-    return 'Presentations &amp; documents';
+    return 'Presentations &amp; Documents';
   }
   if ($is_video) {
     return 'Video production';
   }
-  return esc_html($name);
+  return nor_render_label_with_abbr($name);
 }
 
 /**
- * Abbreviation map for tools labels in work_tag taxonomy.
+ * Tools-group term structure (slug => ordered abbr/separator parts) for
+ * work_tag taxonomy. Full forms are resolved from the common abbreviation
+ * dictionary at render time, not hardcoded here.
  *
  * @return array<string,array<int,array<string,string>>>
  */
 function nor_get_work_tag_tool_abbr_map(): array {
   return [
     'html-css' => [
-      ['abbr' => 'HTML', 'title' => 'HyperText Markup Language'],
+      ['abbr' => 'HTML'],
       ['text' => '/'],
-      ['abbr' => 'CSS',  'title' => 'Cascading Style Sheets'],
+      ['abbr' => 'CSS'],
     ],
-    'js'  => [['abbr' => 'JS',  'title' => 'JavaScript']],
-    'php' => [['abbr' => 'PHP', 'title' => 'Hypertext Preprocessor']],
+    'js'  => [['abbr' => 'JS']],
+    'php' => [['abbr' => 'PHP']],
   ];
 }
 
 /**
  * Render tools-group term label with abbreviation markup when applicable.
+ * Falls back to plain text for any abbr token missing from the common
+ * dictionary (no hardcoded full-form fallback).
  *
  * @param mixed $term
  */
@@ -461,10 +1085,17 @@ function nor_render_work_tag_tool_label($term): string {
     return esc_html((string) $term->name);
   }
 
+  $abbr_map = nor_get_abbreviation_map();
+
   $out = '';
   foreach ($map[$slug] as $part) {
     if (isset($part['abbr'])) {
-      $out .= '<abbr title="' . esc_attr((string) ($part['title'] ?? '')) . '">' . esc_html((string) $part['abbr']) . '</abbr>';
+      $token = (string) $part['abbr'];
+      if (isset($abbr_map[$token])) {
+        $out .= '<abbr title="' . esc_attr($abbr_map[$token]) . '">' . esc_html($token) . '</abbr>';
+      } else {
+        $out .= esc_html($token);
+      }
     } else {
       $out .= esc_html((string) ($part['text'] ?? ''));
     }
@@ -488,20 +1119,7 @@ function nor_sanitize_head_url($raw): string {
   $raw = trim((string) wp_unslash($raw));
   if ($raw === '') return '';
 
-  if (function_exists('nor_seo_meta_normalize_url')) {
-    return (string) nor_seo_meta_normalize_url($raw);
-  }
-
-  if (strpos($raw, '//') === 0) {
-    $raw = 'https:' . $raw;
-  }
-  if (preg_match('#^https?://#i', $raw)) {
-    return (string) esc_url_raw($raw);
-  }
-  if (str_starts_with($raw, '/')) {
-    return (string) home_url($raw);
-  }
-  return '';
+  return (string) nor_seo_meta_normalize_url($raw);
 }
 
 function nor_sanitize_works_archive_posts_per_page($raw): int {
@@ -559,7 +1177,7 @@ function nor_get_term_desc_en(int $term_id, string $fallback = ''): string {
  * @return array<int,string>
  */
 function nor_get_work_client_mask_reserved_slugs(): array {
-  return ['clients', 'iot', 'industries'];
+  return ['clients', 'index-by-initial', 'index-by-industry'];
 }
 
 /**
@@ -571,20 +1189,35 @@ function nor_get_work_client_mask_reserved_slugs(): array {
  */
 function nor_get_work_client_public_payload($term): array {
   if (!$term || is_wp_error($term) || !($term instanceof WP_Term)) {
-    return ['name' => '', 'slug' => '', 'is_masked' => false];
+    return [
+      'name'      => '',
+      'slug'      => '',
+      'is_masked' => false,
+      'enabled'   => false,
+    ];
   }
 
   $name = trim((string) $term->name);
   $slug = trim((string) $term->slug);
 
   if ((string) $term->taxonomy !== 'work_client') {
-    return ['name' => $name, 'slug' => $slug, 'is_masked' => false];
+    return [
+      'name'      => $name,
+      'slug'      => $slug,
+      'is_masked' => false,
+      'enabled'   => false,
+    ];
   }
 
   $term_id = (int) $term->term_id;
   $enabled = (nor_get_term_meta_text($term_id, 'nor_mask_enabled') === '1');
   if (!$enabled) {
-    return ['name' => $name, 'slug' => $slug, 'is_masked' => false];
+    return [
+      'name'      => $name,
+      'slug'      => $slug,
+      'is_masked' => false,
+      'enabled'   => $enabled,
+    ];
   }
 
   $mask_name = nor_get_term_meta_text($term_id, 'nor_mask_name');
@@ -601,6 +1234,7 @@ function nor_get_work_client_public_payload($term): array {
     'name'      => $public_name,
     'slug'      => $public_slug,
     'is_masked' => $is_masked,
+    'enabled'   => $enabled,
   ];
 }
 
@@ -878,7 +1512,11 @@ function nor_get_en_slug_label_aliases(string $slug): array {
 
 /**
  * Get English-facing public name for a client term.
- * If masked slug exists, prefer a humanized slug label.
+ * Prefers the explicit nor_mask_name_en term meta. Falls back to a
+ * humanized-slug label only when nor_mask_name_en hasn't been filled in yet
+ * (legacy behavior, kept so existing masked clients without an explicit
+ * English mask name don't regress to showing no English label at all — not
+ * the intended long-term source of the English label).
  *
  * @param mixed $term
  */
@@ -888,15 +1526,22 @@ function nor_get_term_public_name_en($term, string $fallback = ''): string {
   }
 
   $payload = nor_get_work_client_public_payload($term);
-  $enabled = (nor_get_term_meta_text((int) $term->term_id, 'nor_mask_enabled') === '1');
+  $enabled = $payload['enabled'];
   $is_masked = !empty($payload['is_masked']);
   $slug = trim((string) ($payload['slug'] ?? ''));
   $name = trim((string) ($payload['name'] ?? ''));
 
-  if (($enabled || $is_masked) && $slug !== '') {
-    $label = nor_humanize_mask_slug_for_en_text($slug);
-    if ($label !== '') {
-      return $label;
+  if ($enabled || $is_masked) {
+    $mask_name_en = trim((string) nor_get_term_meta_text((int) $term->term_id, 'nor_mask_name_en'));
+    if ($mask_name_en !== '') {
+      return $mask_name_en;
+    }
+
+    if ($slug !== '') {
+      $label = nor_humanize_mask_slug_for_en_text($slug);
+      if ($label !== '') {
+        return $label;
+      }
     }
   }
 
@@ -983,7 +1628,7 @@ function nor_get_work_client_term_public_name_map($term, string $variant = 'defa
   }
 
   $payload = nor_get_work_client_public_payload($term);
-  $enabled = (nor_get_term_meta_text((int) $term->term_id, 'nor_mask_enabled') === '1');
+  $enabled = $payload['enabled'];
   $real_name = trim((string) $term->name);
   $public_name = ($variant === 'en')
     ? nor_get_term_public_name_en($term, (string) ($payload['name'] ?? ''))
@@ -1039,6 +1684,39 @@ function nor_mask_work_client_term_text($term, string $text, string $variant = '
 }
 
 /**
+ * Whether a Work has at least one masked (nor_mask_enabled=1) work_client
+ * term attached. A Work counts as "masked" as soon as any one of its
+ * clients is masked, even if other clients on the same Work aren't.
+ *
+ * Used to decide OG image selection: a masked Work must never fall back to
+ * the regular per-entry OG image (it can show the real deliverable, company
+ * name, or logo), so it needs its own dedicated, pre-vetted image or the
+ * sitewide default instead.
+ */
+function nor_work_has_masked_client(int $post_id): bool {
+  $post_id = max(0, (int) $post_id);
+  if ($post_id <= 0 || (string) get_post_type($post_id) !== 'works') {
+    return false;
+  }
+
+  $terms = get_the_terms($post_id, 'work_client');
+  if (empty($terms) || is_wp_error($terms) || !is_array($terms)) {
+    return false;
+  }
+
+  foreach ($terms as $term) {
+    if (!($term instanceof WP_Term)) {
+      continue;
+    }
+    if (nor_get_term_meta_text((int) $term->term_id, 'nor_mask_enabled') === '1') {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Build replacement map from clients assigned to a Works post.
  *
  * @return array<string,string>
@@ -1051,7 +1729,18 @@ function nor_get_post_work_client_public_name_map(int $post_id, string $variant 
 
   static $cache = [];
   $variant = strtolower(trim((string) $variant));
-  if ($variant !== 'en') {
+  // 'mixed' is a narrow third mode for a single field that can itself
+  // combine a Japanese name with English free text in one string — a
+  // Work's own nor_tagline (see single-works.php), and the SEO/LLMO
+  // nor_meta_title_override / nor_og_title_override snapshots (see
+  // header.php), which are built from the same "{name} - {tagline}"-style
+  // shape. Same Japanese-targeted aliases/public name as 'default', with the
+  // client's English-name aliases layered on top so that field alone can
+  // resolve both languages in one pass. It must stay its own variant (and
+  // its own cache key below) rather than folding into 'default', so
+  // title/breadcrumb/JSON-LD name/JA summary/JA description — which all
+  // request the plain 'default' map — are never affected by it.
+  if (!in_array($variant, ['en', 'mixed'], true)) {
     $variant = 'default';
   }
 
@@ -1073,7 +1762,7 @@ function nor_get_post_work_client_public_name_map(int $post_id, string $variant 
     }
 
     $payload = nor_get_work_client_public_payload($term);
-    $enabled = (nor_get_term_meta_text((int) $term->term_id, 'nor_mask_enabled') === '1');
+    $enabled = $payload['enabled'];
     $real_name = trim((string) $term->name);
     $public_name = ($variant === 'en')
       ? nor_get_term_public_name_en($term, (string) ($payload['name'] ?? ''))
@@ -1093,6 +1782,58 @@ function nor_get_post_work_client_public_name_map(int $post_id, string $variant 
         continue;
       }
       $map[$alias] = $public_name;
+    }
+
+    // work_client's own nor_tagline holds the client's real English name in
+    // practice (e.g. "APAMAN Co.,Ltd.") — a representation distinct from
+    // $real_name (term->name, typically Japanese, e.g. "APAMAN株式会社")
+    // that the generic alias derivation above cannot produce on its own.
+    // Build a small, deliberately narrow alias set for it — the full string
+    // plus a corporate-suffix-stripped variant (e.g. "APAMAN Co.,Ltd." =>
+    // "APAMAN"), using the same suffix pattern as $real_name's own English-
+    // suffix fallback above — and map them straight to the resolved English
+    // public name (nor_mask_name_en when set). Deliberately NOT reusing
+    // nor_get_work_client_name_aliases() wholesale here: its ASCII-token
+    // extraction step would also emit bare "Co."/"Ltd." as standalone
+    // aliases, which are too generic to safely map to one specific client
+    // sitewide.
+    //
+    // Scoped to variant==='mixed' only (NOT unconditional, and NOT
+    // 'default'): a shared ASCII token can appear in both $real_name and
+    // this English form (e.g. "APAMAN", embeddable in both "APAMAN株式会社"
+    // and "APAMAN Co.,Ltd."), and earlier the $real_name loop above already
+    // maps that same token to the Japanese public name. Layering this
+    // English override into 'default' too used to overwrite it there,
+    // which leaked the English mask name into every other 'default'-variant
+    // consumer for this post (title/breadcrumb/JSON-LD name/JA summary —
+    // see nor_get_work_public_title()/nor_get_work_public_text() without a
+    // variant argument), not just the mixed-field callers. 'mixed' is
+    // requested only by single-works.php's own nor_tagline handling and
+    // header.php's SEO title/OG title override handling, each with its own
+    // cache key, so this override never reaches those other call sites.
+    if ($variant === 'mixed') {
+      $client_name_en = trim((string) nor_get_term_meta_text((int) $term->term_id, 'nor_tagline'));
+      if ($client_name_en !== '' && $client_name_en !== $real_name) {
+        $public_name_en = nor_get_term_public_name_en($term, $public_name);
+        if ($public_name_en !== '') {
+          $en_aliases = [$client_name_en];
+          $en_stripped = preg_replace(
+            '/(?:,\s*)?(Co\.,?\s*Ltd\.?|Company Limited|Incorporated|Inc\.?|Corporation|Corp\.?|Ltd\.?)$/iu',
+            '',
+            $client_name_en
+          );
+          $en_stripped = is_string($en_stripped) ? trim($en_stripped) : '';
+          if ($en_stripped !== '' && $en_stripped !== $client_name_en) {
+            $en_aliases[] = $en_stripped;
+          }
+          foreach ($en_aliases as $en_alias) {
+            if ($en_alias === '' || $en_alias === $public_name_en) {
+              continue;
+            }
+            $map[$en_alias] = $public_name_en;
+          }
+        }
+      }
     }
   }
 
@@ -1118,7 +1859,12 @@ function nor_mask_work_client_names_in_text(string $text, int $post_id = 0, stri
   }
 
   $variant = strtolower(trim((string) $variant));
-  if ($variant !== 'en') {
+  // 'mixed': see nor_get_post_work_client_public_name_map()'s docs above —
+  // must be preserved here rather than folded into 'default', or the
+  // English-name aliases meant only for a single JA/EN-mixed field (a
+  // Work's own nor_tagline, or its SEO title/OG title overrides) would never
+  // reach that dedicated variant at all.
+  if (!in_array($variant, ['en', 'mixed'], true)) {
     $variant = 'default';
   }
 
@@ -1179,6 +1925,77 @@ function nor_get_work_public_text(int $post_id, string $text, string $variant = 
   }
 
   return nor_mask_work_client_names_in_text($text, $post_id, $variant);
+}
+
+/**
+ * Replace only the first occurrence of $search in $subject (byte-offset
+ * based, consistent with strpos()'s own default — safe for UTF-8 as long as
+ * both sides stick to byte-oriented functions, which they do here).
+ */
+function nor_str_replace_first(string $search, string $replace, string $subject): string {
+  if ($search === '') {
+    return $subject;
+  }
+  $pos = strpos($subject, $search);
+  if ($pos === false) {
+    return $subject;
+  }
+  return substr_replace($subject, $replace, $pos, strlen($search));
+}
+
+/**
+ * Mask a title-like SEO override string for client-name occurrences,
+ * without parsing its "{name} - {tagline} | ..." shape at all.
+ *
+ * nor_meta_title_override / nor_og_title_override are frozen snapshots the
+ * SEO/LLMO meta box's "reflect from body" JS copied from the Work's own
+ * title and nor_tagline at some point in the past — so a masked client's
+ * real name can still be sitting in them even when the live H1/tagline are
+ * correctly masked today. Rather than splitting on " - " / " | " (fragile:
+ * the Work's own title can itself legitimately contain " - ", and a
+ * manually-edited override may not follow the formula at all), this looks
+ * up the Work's actual current title and nor_tagline value verbatim, and
+ * their already-correct masked counterparts (nor_get_work_public_title() /
+ * nor_get_work_public_text(..., 'mixed')). If the raw title text is found
+ * literally inside the override, its first occurrence is swapped for the
+ * masked title; same for the raw tagline text. Only the first occurrence of
+ * each is touched (via nor_str_replace_first(), not a global str_replace())
+ * so a short title string that also happens to appear inside the tagline
+ * portion can't get over-replaced there too. Anything else in the override
+ * (section label, site name, or any other manual edit) is left byte-for-byte
+ * untouched, and if the raw title/tagline isn't found verbatim, nothing is
+ * replaced for that part — no guessing.
+ */
+function nor_mask_work_client_seo_title_text(string $text, int $post_id): string {
+  $text = trim($text);
+  if ($text === '') {
+    return '';
+  }
+  if ((string) get_post_type($post_id) !== 'works') {
+    return $text;
+  }
+
+  if (function_exists('nor_get_work_public_title')) {
+    $real_title = trim((string) wp_strip_all_tags((string) get_the_title($post_id)));
+    if ($real_title !== '' && strpos($text, $real_title) !== false) {
+      $public_title = trim((string) wp_strip_all_tags((string) nor_get_work_public_title($post_id, $real_title)));
+      if ($public_title !== '' && $public_title !== $real_title) {
+        $text = nor_str_replace_first($real_title, $public_title, $text);
+      }
+    }
+  }
+
+  if (function_exists('nor_get_work_public_text')) {
+    $real_tagline = trim((string) get_post_meta($post_id, 'nor_tagline', true));
+    if ($real_tagline !== '' && strpos($text, $real_tagline) !== false) {
+      $public_tagline = trim((string) nor_get_work_public_text($post_id, $real_tagline, 'mixed'));
+      if ($public_tagline !== '' && $public_tagline !== $real_tagline) {
+        $text = nor_str_replace_first($real_tagline, $public_tagline, $text);
+      }
+    }
+  }
+
+  return $text;
 }
 
 /**
@@ -1322,6 +2139,36 @@ add_filter('request', function ($vars) {
   return $vars;
 });
 
+// REST API (`/wp-json/wp/v2/work_client`) otherwise returns the raw term
+// (real name/slug/description) regardless of masking — the masking here is
+// display-control only (not strict confidentiality), so this brings the
+// public REST response in line with the front-end masked display using the
+// same payload/mask functions as everywhere else. `link` is already correct
+// (get_term_link() already goes through the `term_link` filter above).
+add_filter('rest_prepare_work_client', function ($response, $item, $request) {
+  if (!($item instanceof WP_Term) || !($response instanceof WP_REST_Response)) {
+    return $response;
+  }
+
+  $payload = nor_get_work_client_public_payload($item);
+  if (empty($payload['is_masked'])) {
+    return $response;
+  }
+
+  $data = $response->get_data();
+  $data['name'] = nor_get_term_public_name($item, (string) $item->name);
+  $data['slug'] = trim((string) ($payload['slug'] ?? '')) !== ''
+    ? (string) $payload['slug']
+    : (string) $item->slug;
+
+  if (array_key_exists('description', $data)) {
+    $data['description'] = nor_mask_work_client_term_text($item, (string) $item->description);
+  }
+
+  $response->set_data($data);
+  return $response;
+}, 10, 3);
+
 /**
  * Build "new" flag from timestamp and window days.
  */
@@ -1345,10 +2192,12 @@ function nor_build_date_payload(string $datetime_iso, string $date_ymd, int $tim
 }
 
 /**
- * Get published Works count.
+ * Get the published post count for a given post type. Shared
+ * implementation behind nor_get_published_works_count() /
+ * nor_get_published_writings_count() (each fixes its own $post_type).
  */
-function nor_get_published_works_count(): int {
-  $c = wp_count_posts('works');
+function nor_get_published_post_count(string $post_type): int {
+  $c = wp_count_posts($post_type);
   if (!$c || is_wp_error($c) || !isset($c->publish)) {
     return 0;
   }
@@ -1356,14 +2205,17 @@ function nor_get_published_works_count(): int {
 }
 
 /**
+ * Get published Works count.
+ */
+function nor_get_published_works_count(): int {
+  return nor_get_published_post_count('works');
+}
+
+/**
  * Get published Writings (post) count.
  */
 function nor_get_published_writings_count(): int {
-  $c = wp_count_posts('post');
-  if (!$c || is_wp_error($c) || !isset($c->publish)) {
-    return 0;
-  }
-  return (int) $c->publish;
+  return nor_get_published_post_count('post');
 }
 
 /**
@@ -1376,6 +2228,15 @@ function nor_format_count_unit(int $count, string $singular, string $plural, str
   $noun = trim(($count === 1) ? $singular : $plural);
   $verb = trim($verb);
   return ($verb !== '') ? ($noun . ' ' . $verb . '.') : ($noun . '.');
+}
+
+/**
+ * Zero-pad a Work/Writing sequence number for display (e.g. 7 -> "007").
+ * No "#" prefix and no branching for 0/unset — callers keep handling those
+ * themselves; this only formats an already-resolved non-negative int.
+ */
+function nor_format_seq_no(int $number, int $width = 3): string {
+  return str_pad((string) $number, $width, '0', STR_PAD_LEFT);
 }
 
 /**
@@ -1597,12 +2458,20 @@ function nor_get_header_schema_context(string $site_url, string $page_url, strin
     $schema_page_type = 'WebPage';
   } elseif (is_singular('works')) {
     $schema_page_type = 'WebPage';
-    $breadcrumbs[] = ['name' => 'Works', 'url' => home_url('/works/')];
+    // Home already doubles as the Works index, so it's the only ancestor
+    // level here (no separate "Works" crumb pointing at /works/, which
+    // itself 301s back to Home).
     $work_id = (int) get_queried_object_id();
     $work_title = trim((string) wp_strip_all_tags((string) get_the_title($work_id)));
     if (function_exists('nor_get_work_public_title')) {
       $work_title = nor_get_work_public_title($work_id, $work_title);
     }
+    // get_the_title() runs through the_title (wptexturize), which entity-
+    // encodes a literal "&" to "&#038;" for HTML display. This crumb feeds
+    // BreadcrumbList.name in JSON-LD (not an HTML context), so decode back
+    // to the literal character here -- same reason header.php's $title_wp
+    // (WebPage.name) already needs this same decode.
+    $work_title = html_entity_decode($work_title, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     $breadcrumbs[] = ['name' => $work_title, 'url' => $page_url];
   } elseif (is_singular('post')) {
     // Writing detail (post_type = post, e.g. /writings/{slug}/).
@@ -1632,14 +2501,20 @@ function nor_get_header_schema_context(string $site_url, string $page_url, strin
   } elseif (function_exists('is_page') && is_page('archives')) {
     $schema_page_type = 'CollectionPage';
     $breadcrumbs[] = ['name' => 'Archives', 'url' => $page_url];
-  } elseif ((function_exists('is_page') && (is_page('iot') || is_page('clients/iot'))) || $req_path === 'clients/iot') {
+  } elseif ((function_exists('is_page') && (is_page('index-by-initial') || is_page('clients/index-by-initial'))) || $req_path === 'clients/index-by-initial') {
     $schema_page_type = 'CollectionPage';
-    $breadcrumbs[] = ['name' => 'Clients', 'url' => home_url('/clients/')];
-    $breadcrumbs[] = ['name' => 'Index of Terms', 'url' => $page_url];
-  } elseif ((function_exists('is_page') && (is_page('industries') || is_page('clients/industries'))) || $req_path === 'clients/industries') {
+    // Mirror the on-screen breadcrumb (single "Clients - Index by Initial"
+    // crumb, see page-index-by-initial.php's nor_build_single_breadcrumb()
+    // call) instead of splitting into separate "Clients" / "Index by
+    // Initial" levels that would both point at the same URL.
+    $breadcrumbs[] = ['name' => 'Clients - Index by Initial', 'url' => $page_url];
+  } elseif ((function_exists('is_page') && (is_page('index-by-industry') || is_page('clients/index-by-industry'))) || $req_path === 'clients/index-by-industry') {
     $schema_page_type = 'CollectionPage';
-    $breadcrumbs[] = ['name' => 'Clients', 'url' => home_url('/clients/')];
-    $breadcrumbs[] = ['name' => 'Industries', 'url' => $page_url];
+    // Mirror the on-screen breadcrumb (single "Clients - Index by Industry"
+    // crumb, see page-index-by-industry.php's nor_build_single_breadcrumb()
+    // call) instead of splitting into separate "Clients" / "Index by
+    // Industry" levels that would both point at the same URL.
+    $breadcrumbs[] = ['name' => 'Clients - Index by Industry', 'url' => $page_url];
   } elseif (function_exists('is_page') && is_page('policies')) {
     $schema_page_type = 'WebPage';
     $breadcrumbs[] = ['name' => 'Policies', 'url' => $page_url];
@@ -1650,35 +2525,72 @@ function nor_get_header_schema_context(string $site_url, string $page_url, strin
     $schema_page_type = 'CollectionPage';
     if ($works_archive_year !== '') {
       $breadcrumbs[] = ['name' => 'Archives', 'url' => home_url('/archives/')];
-      $breadcrumbs[] = ['name' => $works_archive_year, 'url' => $page_url];
+      // BreadcrumbList represents the info hierarchy, not the current
+      // pagination state -- always the year's own base URL (no /page/N/),
+      // even when $page_url (canonical/og:url) is self-canonicalized to a
+      // later page. Same formula header.php uses for the page-1 canonical.
+      $breadcrumbs[] = ['name' => $works_archive_year, 'url' => home_url('/archives/' . rawurlencode($works_archive_year) . '/')];
     } else {
-      $breadcrumbs[] = ['name' => 'Works', 'url' => home_url('/works/')];
+      // Home already doubles as the Works index (page 1), so it's the only
+      // ancestor level here (no separate "Works" crumb pointing at /works/,
+      // which itself 301s back to Home). Page 1 never actually reaches this
+      // branch in practice (the /works/ root already 301s to Home before
+      // this runs), so Home alone is the correct breadcrumb in that case.
       $paged = max(1, (int) get_query_var('paged'));
       if ($paged > 1) {
         $breadcrumbs[] = ['name' => 'Page ' . $paged, 'url' => $page_url];
-      } else {
-        $breadcrumbs[] = ['name' => 'Works Index', 'url' => home_url('/works/')];
       }
     }
   } elseif (function_exists('is_tax') && is_tax('work_category')) {
     $schema_page_type = 'CollectionPage';
     $breadcrumbs[] = ['name' => 'Categories', 'url' => home_url('/categories/')];
     $term = get_queried_object();
-    if ($term instanceof WP_Term) $breadcrumbs[] = ['name' => $term->name, 'url' => $page_url];
+    if ($term instanceof WP_Term) {
+      // BreadcrumbList item = the term's own base URL, not the paginated
+      // $page_url (see the year-archive branch above for the same rule).
+      $cat_base_url = get_term_link($term, 'work_category');
+      $breadcrumbs[] = ['name' => $term->name, 'url' => (!is_wp_error($cat_base_url) && is_string($cat_base_url)) ? $cat_base_url : $page_url];
+    }
   } elseif (function_exists('is_tax') && is_tax('work_tag')) {
     $schema_page_type = 'CollectionPage';
     $breadcrumbs[] = ['name' => 'Tags', 'url' => home_url('/tags/')];
     $term = get_queried_object();
-    if ($term instanceof WP_Term) $breadcrumbs[] = ['name' => $term->name, 'url' => $page_url];
+    if ($term instanceof WP_Term) {
+      // Hierarchical work_tag: insert each ancestor (root-first) as its own
+      // BreadcrumbList level before the current term -- mirrors the visible
+      // breadcrumb fix in taxonomy-works-list.php. Previously only "Tags" +
+      // the current term were ever emitted here, so a child tag's parent(s)
+      // silently disappeared from JSON-LD. Root-level tags (no parent) are
+      // unaffected -- get_ancestors() returns empty for them.
+      if ((int) $term->parent > 0) {
+        $tag_ancestor_ids = array_reverse(get_ancestors((int) $term->term_id, 'work_tag', 'taxonomy'));
+        foreach ($tag_ancestor_ids as $tag_ancestor_id) {
+          $tag_ancestor_term = get_term((int) $tag_ancestor_id, 'work_tag');
+          if (!($tag_ancestor_term instanceof WP_Term)) continue;
+          $tag_ancestor_url = get_term_link($tag_ancestor_term, 'work_tag');
+          if (is_wp_error($tag_ancestor_url)) continue;
+          $breadcrumbs[] = ['name' => (string) $tag_ancestor_term->name, 'url' => (string) $tag_ancestor_url];
+        }
+      }
+      // BreadcrumbList item = the term's own base URL, not the paginated
+      // $page_url (see the year-archive branch above for the same rule).
+      $tag_base_url = get_term_link($term, 'work_tag');
+      $breadcrumbs[] = ['name' => $term->name, 'url' => (!is_wp_error($tag_base_url) && is_string($tag_base_url)) ? $tag_base_url : $page_url];
+    }
   } elseif (function_exists('is_tax') && (is_tax('work_client') || is_tax('work_industry'))) {
     $schema_page_type = 'CollectionPage';
-    $breadcrumbs[] = ['name' => 'Clients', 'url' => home_url('/clients/')];
+    // /clients/ itself is not published content (it 301s to /clients/index-by-initial/);
+    // point the "Clients" crumb directly at the real Client Index.
+    $breadcrumbs[] = ['name' => 'Clients', 'url' => home_url('/clients/index-by-initial/')];
     $term = get_queried_object();
     if ($term instanceof WP_Term) {
       $label = ((string) $term->taxonomy === 'work_client')
         ? nor_get_term_public_name($term, (string) $term->name)
         : (string) $term->name;
-      $breadcrumbs[] = ['name' => $label, 'url' => $page_url];
+      // BreadcrumbList item = the term's own base URL, not the paginated
+      // $page_url (see the year-archive branch above for the same rule).
+      $client_base_url = get_term_link($term, (string) $term->taxonomy);
+      $breadcrumbs[] = ['name' => $label, 'url' => (!is_wp_error($client_base_url) && is_string($client_base_url)) ? $client_base_url : $page_url];
     }
   } elseif (function_exists('is_page') && is_page('writings')) {
     // Writings list (fixed page "writings", rendered by page-writings.php).
@@ -1686,12 +2598,13 @@ function nor_get_header_schema_context(string $site_url, string $page_url, strin
     // straight to the `paged` query var (see the add_rewrite_rule() call for
     // '^writings/page/...'), not WordPress's default page `page` query var.
     $schema_page_type = 'CollectionPage';
+    // Page 1 (/writings/) is the list itself — no separate "index" sub-level,
+    // matching page-writings.php's visual breadcrumb. Page 2+ adds the
+    // actual paginated page as its own crumb.
     $breadcrumbs[] = ['name' => 'Writings', 'url' => home_url('/writings/')];
     $writings_page_num = max(1, (int) get_query_var('paged'));
     if ($writings_page_num > 1) {
       $breadcrumbs[] = ['name' => 'Page ' . $writings_page_num, 'url' => $page_url];
-    } else {
-      $breadcrumbs[] = ['name' => 'Writings Index', 'url' => home_url('/writings/')];
     }
   } elseif (function_exists('is_404') && is_404()) {
     $schema_page_type = 'WebPage';
@@ -2070,9 +2983,8 @@ function nor_render_back_list_button(string $url, string $label = 'Back to List'
  *
  * Usage:
  * $landing = nor_get_landing_page_shell_args($page_id, [
- *   'count'        => 8,
- *   'unit'         => 'categories listed.',
- *   'desc_abbr_map'=> ['UI' => 'User Interface'],
+ *   'count' => 8,
+ *   'unit'  => 'categories listed.',
  * ]);
  *
  * Returns:
@@ -2080,6 +2992,10 @@ function nor_render_back_list_button(string $url, string $label = 'Back to List'
  * - section_h2_ja (string)
  * - section_h2_en (string)
  * - title (string)
+ *
+ * NOTE: tagline/desc_ja/desc_en are plain text here — hero-pages.php itself
+ * applies the common abbreviation dictionary uniformly when rendering them,
+ * so no per-page abbr wiring is needed in this function.
  */
 function nor_get_landing_page_shell_args(int $page_id, array $options = []): array {
   $opts = wp_parse_args($options, [
@@ -2087,7 +3003,6 @@ function nor_get_landing_page_shell_args(int $page_id, array $options = []): arr
     'unit' => '',
     'title_fallback' => '—',
     'section_h2_fallback' => '—',
-    'desc_abbr_map' => [],
   ]);
 
   $title_fallback = is_string($opts['title_fallback']) ? trim($opts['title_fallback']) : '—';
@@ -2103,14 +3018,8 @@ function nor_get_landing_page_shell_args(int $page_id, array $options = []): arr
   $section_h2_ja = (string) ($meta['section_h2_ja'] ?? '—');
   $section_h2_en = (string) ($meta['section_h2_en'] ?? '—');
 
-  $desc_abbr_map = is_array($opts['desc_abbr_map']) ? $opts['desc_abbr_map'] : [];
-  $page_desc_ja_html = '';
-  $page_desc_en_html = '';
-  if (!empty($desc_abbr_map)) {
-    $page_desc_ja_html = nor_render_inline_with_abbr($page_desc_ja, '', $desc_abbr_map);
-    $page_desc_en_html = nor_render_inline_with_abbr($page_desc_en, '', $desc_abbr_map);
-  }
-
+  // NOTE: $page_title is a free-form Page title (get_the_title()), not a
+  // taxonomy/term UI label, so it is intentionally not auto-abbr'd here.
   $hero_args = [
     'count' => (int) $opts['count'],
     'unit'  => is_string($opts['unit']) ? $opts['unit'] : '',
@@ -2120,12 +3029,6 @@ function nor_get_landing_page_shell_args(int $page_id, array $options = []): arr
     'desc_en' => $page_desc_en,
     'breadcrumbs' => nor_build_single_breadcrumb($page_title),
   ];
-  if ($page_desc_ja_html !== '') {
-    $hero_args['desc_ja_html'] = $page_desc_ja_html;
-  }
-  if ($page_desc_en_html !== '') {
-    $hero_args['desc_en_html'] = $page_desc_en_html;
-  }
 
   return [
     'hero_args' => $hero_args,
@@ -2136,27 +3039,27 @@ function nor_get_landing_page_shell_args(int $page_id, array $options = []): arr
 }
 
 /**
- * Build Clients view tabs (Index of Terms / Industries) for hero widget.
+ * Build Clients view tabs (Index by Initial / Index by Industry) for hero widget.
  *
- * @param string              $current_view    'iot' or 'industries'
- * @param array<string,mixed> $label_fallbacks Optional fallbacks: ['iot' => '...', 'industries' => '...']
+ * @param string              $current_view    'index-by-initial' or 'index-by-industry'
+ * @param array<string,mixed> $label_fallbacks Optional fallbacks: ['index-by-initial' => '...', 'index-by-industry' => '...']
  * @return array<string,mixed>
  */
-function nor_get_clients_tabs_nav(string $current_view = 'iot', array $label_fallbacks = []): array {
+function nor_get_clients_tabs_nav(string $current_view = 'index-by-initial', array $label_fallbacks = []): array {
   $current = strtolower(trim($current_view));
-  if ($current !== 'industries') {
-    $current = 'iot';
+  if ($current !== 'index-by-industry') {
+    $current = 'index-by-initial';
   }
 
-  $fallback_iot = isset($label_fallbacks['iot']) && is_string($label_fallbacks['iot'])
-    ? trim((string) $label_fallbacks['iot'])
+  $fallback_iot = isset($label_fallbacks['index-by-initial']) && is_string($label_fallbacks['index-by-initial'])
+    ? trim((string) $label_fallbacks['index-by-initial'])
     : '';
-  $fallback_industries = isset($label_fallbacks['industries']) && is_string($label_fallbacks['industries'])
-    ? trim((string) $label_fallbacks['industries'])
+  $fallback_industries = isset($label_fallbacks['index-by-industry']) && is_string($label_fallbacks['index-by-industry'])
+    ? trim((string) $label_fallbacks['index-by-industry'])
     : '';
 
-  $iot_page = get_page_by_path('clients/iot');
-  $industries_page = get_page_by_path('clients/industries');
+  $iot_page = get_page_by_path('clients/index-by-initial');
+  $industries_page = get_page_by_path('clients/index-by-industry');
 
   $iot_label = ($iot_page instanceof WP_Post) ? trim((string) get_the_title($iot_page)) : '';
   $industries_label = ($industries_page instanceof WP_Post) ? trim((string) get_the_title($industries_page)) : '';
@@ -2170,18 +3073,18 @@ function nor_get_clients_tabs_nav(string $current_view = 'iot', array $label_fal
 
   return [
     'nav_list_aria' => 'Client views',
-    'iot_label' => $iot_label,
-    'industries_label' => $industries_label,
+    'index_by_initial_label' => $iot_label,
+    'index_by_industry_label' => $industries_label,
     'nav_list' => [
       [
         'label' => $iot_label,
-        'url' => home_url('/clients/iot/'),
-        'current' => ($current === 'iot'),
+        'url' => home_url('/clients/index-by-initial/'),
+        'current' => ($current === 'index-by-initial'),
       ],
       [
         'label' => $industries_label,
-        'url' => home_url('/clients/industries/'),
-        'current' => ($current === 'industries'),
+        'url' => home_url('/clients/index-by-industry/'),
+        'current' => ($current === 'index-by-industry'),
       ],
     ],
   ];
@@ -2612,6 +3515,96 @@ function nor_find_work_ids_by_keyword(string $keyword): array {
   if (is_wp_error($client_term_ids) || !is_array($client_term_ids)) $client_term_ids = [];
   $client_term_ids = array_values(array_filter(array_map('intval', $client_term_ids)));
 
+  // Masked work_client terms must never be searchable by their real, stored
+  // $term->name/slug -- core's search above matches on that raw name alone,
+  // so a masked term that happens to match is dropped here even if it was
+  // found. This is a masking-purpose exclusion (not just "no data to
+  // match"): someone who already knows a masked Client's real name must not
+  // be able to use it to find the Works tied to that masked identity. Only
+  // the public-name loop below may re-add a masked term, and only by its
+  // public name.
+  if (!empty($client_term_ids)) {
+    $client_term_ids = array_values(array_filter($client_term_ids, static function (int $term_id): bool {
+      return nor_get_term_meta_text($term_id, 'nor_mask_enabled') !== '1';
+    }));
+  }
+
+  // Masked work_client terms: the keyword a visitor actually sees and would
+  // type is the public/masked name (nor_mask_name term meta), which core's
+  // own term search above has no knowledge of (and, per the exclusion just
+  // above, is never allowed to match these terms by their real name anyway).
+  // Reuse the existing nor_get_term_public_name() helper (same one already
+  // used for Client detail head/Hero/Breadcrumb output) to match masked
+  // terms by their public name only; the real name itself is never exposed
+  // here, only compared server-side against the keyword.
+  //
+  // Same loop also flags masked terms whose *real* name matches the keyword
+  // (below, $real_name_matched_client_ids) -- a Work's raw post_title/
+  // post_excerpt/post_content can still literally contain the real Client
+  // name (masking is applied only at display time, via
+  // nor_mask_work_client_names_in_text()/nor_get_work_public_title()/
+  // nor_get_work_public_text()), so the native 's' full-text search above
+  // can match a masked Client's real name even though this taxonomy path
+  // can't. Those Works are removed from $text_ids further down.
+  $all_client_terms = get_terms([
+    'taxonomy'   => 'work_client',
+    'hide_empty' => false,
+  ]);
+  $real_name_matched_client_ids = [];
+  if (!is_wp_error($all_client_terms) && is_array($all_client_terms)) {
+    foreach ($all_client_terms as $client_term) {
+      if (!($client_term instanceof WP_Term)) continue;
+      $client_term_id = (int) $client_term->term_id;
+      if (nor_get_term_meta_text($client_term_id, 'nor_mask_enabled') !== '1') continue;
+
+      if (!in_array($client_term_id, $client_term_ids, true) && function_exists('nor_get_term_public_name')) {
+        $public_name = nor_get_term_public_name($client_term, '');
+        if ($public_name !== '') {
+          $found_public = function_exists('mb_stripos') ? (mb_stripos($public_name, $q) !== false) : (stripos($public_name, $q) !== false);
+          if ($found_public) {
+            $client_term_ids[] = $client_term_id;
+          }
+        }
+      }
+
+      $real_name = trim((string) $client_term->name);
+      if ($real_name !== '') {
+        $found_real = function_exists('mb_stripos') ? (mb_stripos($real_name, $q) !== false) : (stripos($real_name, $q) !== false);
+        if ($found_real) {
+          $real_name_matched_client_ids[] = $client_term_id;
+        }
+      }
+    }
+  }
+
+  // Drop any Work tied to a masked Client whose real name matched the
+  // keyword from the full-text results -- same work_client relationship
+  // used everywhere else, no new masking system.
+  if (!empty($real_name_matched_client_ids) && !empty($text_ids)) {
+    $excluded_ids_q = new WP_Query([
+      'post_type'              => 'works',
+      'post_status'            => 'publish',
+      'tax_query'              => [[
+        'taxonomy'         => 'work_client',
+        'field'            => 'term_id',
+        'terms'            => $real_name_matched_client_ids,
+        'include_children' => false,
+      ]],
+      'posts_per_page'         => -1,
+      'fields'                 => 'ids',
+      'no_found_rows'          => true,
+      'ignore_sticky_posts'    => true,
+      'update_post_meta_cache' => false,
+      'update_post_term_cache' => false,
+    ]);
+    $excluded_ids = !empty($excluded_ids_q->posts) ? array_map('intval', (array) $excluded_ids_q->posts) : [];
+    wp_reset_postdata();
+
+    if (!empty($excluded_ids)) {
+      $text_ids = array_values(array_diff($text_ids, $excluded_ids));
+    }
+  }
+
   $tax_ids = [];
   if (!empty($tag_term_ids) || !empty($client_term_ids)) {
     $tax_query = ['relation' => 'OR'];
@@ -2891,6 +3884,57 @@ function nor_render_external_sites_settings_page(): void {
   <?php
 }
 
+/**
+ * Shared "select from Media Library" inline JS for a `.nor-og-media-pick`
+ * button + its `data-target` text input. Used by the SEO/LLMO settings page
+ * (Default/Home OG image) and the Works settings page (Works archive OG
+ * image) — not by the post-editor SEO meta box, which keeps its own
+ * independent copy (extra warning-refresh + re-init guard).
+ */
+function nor_render_og_media_picker_script(): void {
+  ?>
+  <script>
+    (function () {
+      document.addEventListener('click', function (e) {
+        var button = e.target.closest('.nor-og-media-pick');
+        if (!button) return;
+        e.preventDefault();
+
+        var targetId = String(button.getAttribute('data-target') || '').trim();
+        if (!targetId) return;
+
+        if (typeof window.wp === 'undefined' || !window.wp.media) {
+          window.alert('メディアライブラリを読み込めませんでした。ページを再読み込みして再度お試しください。');
+          return;
+        }
+
+        var frame = window.wp.media({
+          title: 'OG画像を選択',
+          library: { type: 'image' },
+          button: { text: 'この画像を使用' },
+          multiple: false
+        });
+
+        frame.on('select', function () {
+          var selection = frame.state().get('selection');
+          if (!selection || selection.length === 0) return;
+          var media = selection.first().toJSON();
+          if (!media || !media.url) return;
+
+          var input = document.getElementById(targetId);
+          if (!input) return;
+          input.value = media.url;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+
+        frame.open();
+      });
+    })();
+  </script>
+  <?php
+}
+
 function nor_render_seo_llmo_settings_page(): void {
   if (!current_user_can('manage_options')) return;
 
@@ -3073,45 +4117,30 @@ function nor_render_seo_llmo_settings_page(): void {
           if (homeUseDefault && homeUseDefault.checked) fillHomeFromDefaults();
         });
       }
-
-      document.addEventListener('click', function (e) {
-        var button = e.target.closest('.nor-og-media-pick');
-        if (!button) return;
-        e.preventDefault();
-
-        var targetId = String(button.getAttribute('data-target') || '').trim();
-        if (!targetId) return;
-
-        if (typeof window.wp === 'undefined' || !window.wp.media) {
-          window.alert('メディアライブラリを読み込めませんでした。ページを再読み込みして再度お試しください。');
-          return;
-        }
-
-        var frame = window.wp.media({
-          title: 'OG画像を選択',
-          library: { type: 'image' },
-          button: { text: 'この画像を使用' },
-          multiple: false
-        });
-
-        frame.on('select', function () {
-          var selection = frame.state().get('selection');
-          if (!selection || selection.length === 0) return;
-          var media = selection.first().toJSON();
-          if (!media || !media.url) return;
-
-          var input = document.getElementById(targetId);
-          if (!input) return;
-          input.value = media.url;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-          input.dispatchEvent(new Event('change', { bubbles: true }));
-        });
-
-        frame.open();
-      });
     })();
   </script>
   <?php
+  nor_render_og_media_picker_script();
+}
+
+/**
+ * The single source of truth for robots-override value/label choices,
+ * shared by every admin `<select>` that offers them and every validation
+ * check that enforces them (the latter via array_keys() on this same
+ * return value, rather than a separate hardcoded value list).
+ *
+ * @return array<string,string> value => admin-facing label
+ */
+function nor_get_robots_override_choices(): array {
+  $robots_default = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+  return [
+    '' => 'デフォルト（' . $robots_default . '）',
+    $robots_default => $robots_default,
+    'index, follow' => 'index, follow',
+    'noindex, follow' => 'noindex, follow',
+    'noindex, nofollow' => 'noindex, nofollow',
+    'index, nofollow' => 'index, nofollow',
+  ];
 }
 
 function nor_render_works_settings_page(): void {
@@ -3148,15 +4177,7 @@ function nor_render_works_settings_page(): void {
   $og_title_auto = 'Works';
   if ($site_name !== '') $og_title_auto .= ' | ' . $site_name;
   $og_title_input = ($og_title !== '') ? $og_title : $og_title_auto;
-  $robots_default = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
-  $robots_options = [
-    '' => 'デフォルト（' . $robots_default . '）',
-    $robots_default => $robots_default,
-    'index, follow' => 'index, follow',
-    'noindex, follow' => 'noindex, follow',
-    'noindex, nofollow' => 'noindex, nofollow',
-    'index, nofollow' => 'index, nofollow',
-  ];
+  $robots_options = nor_get_robots_override_choices();
   ?>
   <div class="wrap">
     <h1>Works 設定</h1>
@@ -3254,46 +4275,8 @@ function nor_render_works_settings_page(): void {
       <?php submit_button('設定を保存'); ?>
     </form>
   </div>
-  <script>
-    (function () {
-      document.addEventListener('click', function (e) {
-        var button = e.target.closest('.nor-og-media-pick');
-        if (!button) return;
-        e.preventDefault();
-
-        var targetId = String(button.getAttribute('data-target') || '').trim();
-        if (!targetId) return;
-
-        if (typeof window.wp === 'undefined' || !window.wp.media) {
-          window.alert('メディアライブラリを読み込めませんでした。ページを再読み込みして再度お試しください。');
-          return;
-        }
-
-        var frame = window.wp.media({
-          title: 'OG画像を選択',
-          library: { type: 'image' },
-          button: { text: 'この画像を使用' },
-          multiple: false
-        });
-
-        frame.on('select', function () {
-          var selection = frame.state().get('selection');
-          if (!selection || selection.length === 0) return;
-          var media = selection.first().toJSON();
-          if (!media || !media.url) return;
-
-          var input = document.getElementById(targetId);
-          if (!input) return;
-          input.value = media.url;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-          input.dispatchEvent(new Event('change', { bubbles: true }));
-        });
-
-        frame.open();
-      });
-    })();
-  </script>
   <?php
+  nor_render_og_media_picker_script();
 }
 
 add_action('admin_menu', function () {
@@ -3349,17 +4332,63 @@ add_filter('wp_sitemaps_add_provider', function ($provider, $name) {
   return $provider;
 }, 10, 2);
 
+// Exclude taxonomies whose public archives are retired/redirected from the
+// XML sitemap: category/post_tag (Writings archives now 301 to /writings/,
+// see the template_redirect handler above) and work_industry (its public
+// archive was already retired in favor of /clients/index-by-industry/). Leaves
+// work_category/work_tag/work_client sitemap entries untouched.
+add_filter('wp_sitemaps_taxonomies', function ($taxonomies) {
+  if (is_array($taxonomies)) {
+    unset($taxonomies['category'], $taxonomies['post_tag'], $taxonomies['work_industry']);
+  }
+  return $taxonomies;
+});
+
+// Exclude the "search" fixed page from the page sitemap: it's an internal
+// search-results page (noindex, follow — see the robots logic in
+// header.php) and shouldn't be offered to crawlers as a page to index.
+add_filter('wp_sitemaps_posts_query_args', function ($args, $post_type) {
+  if ($post_type !== 'page' || !is_array($args)) return $args;
+
+  $search_page = get_page_by_path('search');
+  if ($search_page instanceof WP_Post) {
+    $exclude = (isset($args['post__not_in']) && is_array($args['post__not_in'])) ? $args['post__not_in'] : [];
+    $exclude[] = (int) $search_page->ID;
+    $args['post__not_in'] = $exclude;
+  }
+
+  return $args;
+}, 10, 2);
+
 // Rewrite: reserve /clients/ pages (clients + children) so they don't get captured by the work_client taxonomy.
 add_action('init', function () {
   // Parent page
   add_rewrite_rule('^clients/?$', 'index.php?pagename=clients', 'top');
 
   // Child pages under /clients/
-  add_rewrite_rule('^clients/iot/?$', 'index.php?pagename=clients/iot', 'top');
-  add_rewrite_rule('^clients/industries/?$', 'index.php?pagename=clients/industries', 'top');
+  add_rewrite_rule('^clients/index-by-initial/?$', 'index.php?pagename=clients/index-by-initial', 'top');
+  add_rewrite_rule('^clients/index-by-industry/?$', 'index.php?pagename=clients/index-by-industry', 'top');
 }, 1);
 
-// Redirect: /clients/ -> /clients/iot/
+/**
+ * Dispatch one of the theme's error templates (404/403/410/5xx.php): set the
+ * HTTP status, disable caching, include the template and exit — or, if the
+ * template file can't be located, fall back to wp_die() with the same status.
+ */
+function nor_dispatch_error_template(int $status, string $template, string $die_message): void {
+  status_header($status);
+  nocache_headers();
+
+  $template_path = locate_template($template);
+  if ($template_path) {
+    include $template_path;
+    exit;
+  }
+
+  wp_die($die_message, $die_message, ['response' => $status]);
+}
+
+// Redirect: /clients/ -> /clients/index-by-initial/
 // Redirect: /works/  -> Home (Home is treated as page 1 for Works; /works/page/2/ starts from item 7)
 add_action('template_redirect', function () {
   if (is_admin() || wp_doing_ajax() || (defined('REST_REQUEST') && REST_REQUEST)) return;
@@ -3369,32 +4398,46 @@ add_action('template_redirect', function () {
   $uri_path = isset($_SERVER['REQUEST_URI']) ? (string) wp_parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH) : '';
   $uri_path = trim($uri_path, '/');
   if (preg_match('#^wp-sitemap-users-[0-9]+\.xml$#i', $uri_path)) {
-    status_header(404);
-    nocache_headers();
-    $tpl = locate_template('404.php');
-    if ($tpl) {
-      include $tpl;
-      exit;
-    }
-    wp_die('404 Not Found', '404 Not Found', ['response' => 404]);
+    nor_dispatch_error_template(404, '404.php', '404 Not Found');
   }
 
-  // 1) /clients/ -> /clients/iot/
-  // Request path without leading/trailing slashes (e.g. "clients", "clients/iot")
+  // 1) /clients/ -> /clients/index-by-initial/
+  // Request path without leading/trailing slashes (e.g. "clients", "clients/index-by-initial")
   $req = isset($GLOBALS['wp']) ? (string) $GLOBALS['wp']->request : '';
   $req = trim($req, '/');
 
   if ($req === 'clients') {
-    wp_redirect(home_url('/clients/iot/'), 301);
+    wp_redirect(home_url('/clients/index-by-initial/'), 301);
     exit;
   }
 
   // 2) /works/ -> Home
   // Only redirect the archive root path "/works/" (non-paged).
   // Keep /works/page/{n}/ and /archives/{year}/ working.
+  // 301: Home is a permanent stand-in for Works page 1, not a temporary move.
   if ($req === 'works') {
-    wp_safe_redirect(home_url('/'), 302);
+    wp_safe_redirect(home_url('/'), 301);
     exit;
+  }
+
+  // 2b) Retire WordPress-standard archive URLs that Writings (post_type=post)
+  // incidentally exposes — category/post_tag/author/date archives — in
+  // favor of the single /writings/ index. Feeds are left untouched. The
+  // Works year archive (/archives/{year}/) also sets core's `year` query
+  // var and must not be swept up here (checked via the custom `nor_year`
+  // marker and post_type=works, either of which is sufficient to exclude it).
+  if (!is_feed()) {
+    $is_works_year_archive = (trim((string) get_query_var('nor_year')) !== '')
+      || (function_exists('is_post_type_archive') && is_post_type_archive('works'));
+    if (!$is_works_year_archive
+      && ((function_exists('is_category') && is_category())
+        || (function_exists('is_tag') && is_tag())
+        || (function_exists('is_author') && is_author())
+        || (function_exists('is_date') && is_date()))
+    ) {
+      wp_safe_redirect(home_url('/writings/'), 301);
+      exit;
+    }
   }
 
   // 3) work_client archive: force masked slug URL when enabled.
@@ -3419,13 +4462,13 @@ add_action('template_redirect', function () {
     }
   }
 
-  // 4) /works/industries/{term}/ -> /clients/industries/#client-industry-{term}
+  // 4) /works/industries/{term}/ -> /clients/index-by-industry/#client-industry-{term}
   // Keep industry terms as internal master data, but retire the public industry taxonomy archive.
   // Match by request path first so we can redirect even if the term slug is missing/invalid.
   if (preg_match('#^works/industries(?:/([^/]+))?/?$#', $req, $m)) {
     $slug_raw = isset($m[1]) ? rawurldecode((string) $m[1]) : '';
     $slug = sanitize_title($slug_raw);
-    $target = home_url('/clients/industries/');
+    $target = home_url('/clients/index-by-industry/');
     if ($slug !== '') $target .= '#client-industry-' . $slug;
     wp_safe_redirect($target, 301);
     exit;
@@ -3433,38 +4476,17 @@ add_action('template_redirect', function () {
 
   // 5) /403/ -> theme 403 template
   if ($req === '403') {
-    status_header(403);
-    nocache_headers();
-    $tpl = locate_template('403.php');
-    if ($tpl) {
-      include $tpl;
-      exit;
-    }
-    wp_die('403 Forbidden', '403 Forbidden', ['response' => 403]);
+    nor_dispatch_error_template(403, '403.php', '403 Forbidden');
   }
 
   // 6) /410/ -> theme 410 template
   if ($req === '410') {
-    status_header(410);
-    nocache_headers();
-    $tpl = locate_template('410.php');
-    if ($tpl) {
-      include $tpl;
-      exit;
-    }
-    wp_die('410 Gone', '410 Gone', ['response' => 410]);
+    nor_dispatch_error_template(410, '410.php', '410 Gone');
   }
 
   // 7) /5xx/ -> theme 5xx template (503 for temporary server-side issue)
   if ($req === '5xx') {
-    status_header(503);
-    nocache_headers();
-    $tpl = locate_template('5xx.php');
-    if ($tpl) {
-      include $tpl;
-      exit;
-    }
-    wp_die('503 Service Unavailable', '503 Service Unavailable', ['response' => 503]);
+    nor_dispatch_error_template(503, '5xx.php', '503 Service Unavailable');
   }
 });
 
@@ -3570,6 +4592,7 @@ add_action('init', function () {
       'search_items'      => 'カテゴリーを検索',
       'parent_item'       => '親カテゴリー',
       'parent_item_colon' => '親カテゴリー:',
+      'back_to_items'     => '← カテゴリーへ戻る',
     ],
     'public'       => true,
     'hierarchical' => true,
@@ -3593,6 +4616,9 @@ add_action('init', function () {
       'search_items'      => 'タグを検索',
       'parent_item'       => '親タグ',
       'parent_item_colon' => '親タグ:',
+      // Without this, hierarchical taxonomies fall back to WordPress core's
+      // generic "← Back to Categories" default label after a term update.
+      'back_to_items'     => '← タグへ戻る',
     ],
     'public'       => true,
     'hierarchical' => true,
@@ -3614,6 +4640,9 @@ add_action('init', function () {
       'add_new_item'      => 'クライアントを追加',
       'new_item_name'     => '新規クライアント名',
       'search_items'      => 'クライアントを検索',
+      // Without this, non-hierarchical taxonomies fall back to WordPress
+      // core's generic "← Back to Tags" default label after a term update.
+      'back_to_items'     => '← クライアントへ戻る',
     ],
     'public'       => true,
     'hierarchical' => false,
@@ -3637,6 +4666,9 @@ add_action('init', function () {
       'add_new_item'  => '業種を追加',
       'new_item_name' => '新規業種名',
       'search_items'  => '業種を検索',
+      // Without this, non-hierarchical taxonomies fall back to WordPress
+      // core's generic "← Back to Tags" default label after a term update.
+      'back_to_items' => '← 業種へ戻る',
     ],
     'public'       => true,
     'hierarchical' => false,
@@ -3686,8 +4718,47 @@ add_action('wp_enqueue_scripts', function () {
   wp_enqueue_style('nor-base',   $theme_uri . '/assets/css/nor.base.css',   ['nor-tokens'], $asset_ver('assets/css/nor.base.css', $fallback_ver));
   wp_enqueue_style('nor-ui',     $theme_uri . '/assets/css/nor.ui.css',     ['nor-base'], $asset_ver('assets/css/nor.ui.css', $fallback_ver));
 
+  // CSS (per-page split, Performance A/B test): Card Taxonomy/Archive/Client
+  // are not used on Home, so only load nor.works.css on the Categories/Tags/
+  // Archives/Clients index pages, which render via card-taxonomy/
+  // card-archive/card-client (NOT the taxonomy archive templates, which
+  // reuse Card Works from nor-ui, and NOT Works detail, which doesn't use
+  // any of these three — see nor-article below).
+  $needs_works_css = is_page('categories') || is_page('tags') || is_page('archives')
+    || is_page('index-by-initial') || is_page('clients/index-by-initial')
+    || is_page('index-by-industry') || is_page('clients/index-by-industry');
+  if ($needs_works_css) {
+    wp_enqueue_style('nor-works', $theme_uri . '/assets/css/nor.works.css', ['nor-ui'], $asset_ver('assets/css/nor.works.css', $fallback_ver));
+  }
+
+  // CSS (per-page split, Performance A/B test): Card Article is shared by
+  // Works detail (single-works.php) AND Writings detail (single-post.php),
+  // unlike Card Taxonomy/Archive/Client above, so it's a separate stylesheet
+  // rather than being bundled into nor.works.css (which Writings has no
+  // other use for) or kept in nor.ui.css (which would load it on Home too).
+  $needs_article_css = is_singular('works') || is_singular('post');
+  if ($needs_article_css) {
+    wp_enqueue_style('nor-article', $theme_uri . '/assets/css/nor.article.css', ['nor-ui'], $asset_ver('assets/css/nor.article.css', $fallback_ver));
+  }
+
+  // CSS (per-page split, Performance A/B test): About/FAQs/Policies/Notes/
+  // Contact/See Also are fixed-page content not used on Home.
+  $needs_pages_css = is_page('about') || is_page('faqs') || is_page('policies')
+    || is_page('notes') || is_page('contact');
+  if ($needs_pages_css) {
+    wp_enqueue_style('nor-pages', $theme_uri . '/assets/css/nor.pages.css', ['nor-ui'], $asset_ver('assets/css/nor.pages.css', $fallback_ver));
+  }
+
   // JS
-  wp_enqueue_script('nor-js', $theme_uri . '/assets/js/nor.js', [], $asset_ver('assets/js/nor.js', $fallback_ver), true);
+  // Performance A/B test (script loading strategy only): defer via the
+  // WP 6.3+ args-array form of wp_enqueue_script() (still standard in
+  // WP 7.1), which replaces the old boolean $in_footer param but keeps
+  // in_footer => true, so footer placement/output order is unchanged —
+  // only the resulting <script> tag gains the defer attribute.
+  wp_enqueue_script('nor-js', $theme_uri . '/assets/js/nor.js', [], $asset_ver('assets/js/nor.js', $fallback_ver), [
+    'strategy'  => 'defer',
+    'in_footer' => true,
+  ]);
 });
 
 // Admin: customize columns for Works list
@@ -3774,6 +4845,12 @@ add_action('work_client_add_form_fields', function () {
     <p class="description">公開時に表示する名称です。未入力時は正式名称を使います。</p>
   </div>
 
+  <div class="form-field term-nor-mask-name-en-wrap">
+    <label for="nor_mask_name_en">伏せ英語名称</label>
+    <input name="nor_mask_name_en" id="nor_mask_name_en" type="text" value="" class="regular-text" />
+    <p class="description">英語文中で表示する伏せ名称です。未入力時は暫定的な自動生成値を使います。</p>
+  </div>
+
   <div class="form-field term-nor-mask-slug-wrap">
     <label for="nor_mask_slug">伏せスラッグ</label>
     <input name="nor_mask_slug" id="nor_mask_slug" type="text" value="" class="regular-text" />
@@ -3805,6 +4882,7 @@ add_action('work_client_edit_form_fields', function ($term) {
 
   $mask_enabled = (nor_get_term_meta_text((int) $term->term_id, 'nor_mask_enabled') === '1');
   $mask_name = nor_get_term_meta_text((int) $term->term_id, 'nor_mask_name');
+  $mask_name_en = nor_get_term_meta_text((int) $term->term_id, 'nor_mask_name_en');
   $mask_slug = sanitize_title(nor_get_term_meta_text((int) $term->term_id, 'nor_mask_slug'));
   ?>
   <tr class="form-field term-nor-desc-en-wrap">
@@ -3862,16 +4940,23 @@ add_action('work_client_edit_form_fields', function ($term) {
     </td>
   </tr>
 
+  <tr class="form-field term-nor-mask-name-en-wrap">
+    <th scope="row"><label for="nor_mask_name_en">伏せ英語名称</label></th>
+    <td>
+      <input name="nor_mask_name_en" id="nor_mask_name_en" type="text" value="<?php echo esc_attr($mask_name_en); ?>" class="regular-text" />
+      <p class="description">英語文中で表示する伏せ名称です。未入力時は暫定的な自動生成値を使います。</p>
+    </td>
+  </tr>
+
   <tr class="form-field term-nor-mask-slug-wrap">
     <th scope="row"><label for="nor_mask_slug">伏せスラッグ</label></th>
     <td>
       <input name="nor_mask_slug" id="nor_mask_slug" type="text" value="<?php echo esc_attr($mask_slug); ?>" class="regular-text" />
-      <p class="description">公開URL用スラッグ。英数字とハイフン推奨（予約語: clients / iot / industries）。未入力時は伏せ名称から自動生成します。</p>
+      <p class="description">公開URL用スラッグ。英数字とハイフン推奨（予約語: clients / index-by-initial / index-by-industry）。未入力時は伏せ名称から自動生成します。</p>
     </td>
   </tr>
   <?php
 });
-
 
 /**
  * Admin: work_client term meta (nor_tagline / nor_desc_en / nor_yomi)
@@ -3949,6 +5034,16 @@ function nor_save_work_client_term_meta_from_post(int $term_id): void {
     update_term_meta($term_id, 'nor_mask_name', $mask_name);
   }
 
+  $mask_name_en = '';
+  if (isset($_POST['nor_mask_name_en'])) {
+    $mask_name_en = trim((string) sanitize_text_field((string) wp_unslash($_POST['nor_mask_name_en'])));
+  }
+  if ($mask_name_en === '') {
+    delete_term_meta($term_id, 'nor_mask_name_en');
+  } else {
+    update_term_meta($term_id, 'nor_mask_name_en', $mask_name_en);
+  }
+
   $mask_slug = '';
   if (isset($_POST['nor_mask_slug'])) {
     $mask_slug = sanitize_title((string) wp_unslash($_POST['nor_mask_slug']));
@@ -3975,6 +5070,91 @@ add_action('edited_work_client', function ($term_id) {
 });
 
 /**
+ * ========================================
+ * Taxonomy admin fields: WAF-safe encoded transport (work_category / work_tag)
+ * ========================================
+ * Real-world testing confirmed Sakura's WAF rejects saves on these two
+ * taxonomies' theme-added fields (nor_tagline, nor_desc_en) — even plain
+ * text like "aaaaa=bbbbb" — while the WordPress-standard `description`
+ * field on the very same screen saves fine. So only these theme-added
+ * fields are switched to the same base64url hidden-field transport already
+ * used by Policies/Notes (nor_policies_encode_rich_storage()): the visible
+ * textarea/input carries no `name` attribute (never POSTed raw), only its
+ * base64url mirror is. Values are decoded and given their normal sanitize
+ * treatment before storage — this is a transport fix, not a WAF bypass for
+ * otherwise-disallowed HTML.
+ */
+if (!function_exists('nor_taxonomy_encoded_field_js')) {
+  function nor_taxonomy_encoded_field_js(string $field_key): void {
+    ?>
+    <script>
+    (function(){
+      var ta = document.getElementById(<?php echo wp_json_encode($field_key); ?>);
+      var hidden = document.getElementById(<?php echo wp_json_encode($field_key . '_b64'); ?>);
+      if (!ta || !hidden) return;
+      function utf8ToBase64Url(str) {
+        var utf8 = encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function (_, p1) {
+          return String.fromCharCode(parseInt(p1, 16));
+        });
+        var b64 = window.btoa(utf8);
+        return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+      }
+      // Must match nor_policies_encode_rich_storage()'s format exactly
+      // (empty stays empty, otherwise "b64:" + base64url) — the PHP-side
+      // decoder requires this same "b64:" prefix to trust a submitted value.
+      function encodeForTransport(str) {
+        return str === '' ? '' : ('b64:' + utf8ToBase64Url(str));
+      }
+      function sync() { hidden.value = encodeForTransport(ta.value || ''); }
+      ta.addEventListener('input', sync);
+      ta.addEventListener('change', sync);
+      var form = ta.closest('form');
+      if (form) form.addEventListener('submit', sync);
+      sync();
+    })();
+    </script>
+    <?php
+  }
+}
+
+if (!function_exists('nor_taxonomy_encoded_field_decode')) {
+  /**
+   * Decodes a "_b64" POST value using the shared Policies base64url codec.
+   * Returns:
+   * - null  : the field wasn't submitted at all — caller must leave the
+   *           existing stored value untouched.
+   * - false : the field was submitted but is not trustworthy (missing/
+   *           malformed encoding) — caller must leave the existing stored
+   *           value untouched, never treat this as "cleared".
+   * - string: successfully decoded (may legitimately be '' when the admin
+   *           intentionally emptied the field).
+   */
+  function nor_taxonomy_encoded_field_decode(string $post_key) {
+    if (!isset($_POST[$post_key])) return null;
+
+    $raw = trim((string) wp_unslash($_POST[$post_key]));
+    if ($raw === '') return '';
+
+    if (strncmp($raw, 'b64:', 4) !== 0) {
+      return false;
+    }
+
+    $decoded = function_exists('nor_policies_decode_rich_storage')
+      ? nor_policies_decode_rich_storage($raw)
+      : false;
+
+    if (!is_string($decoded) || $decoded === '') {
+      // nor_policies_decode_rich_storage() returns '' for both a genuinely
+      // empty payload and a decode failure. $raw is already known non-empty
+      // here, so an empty result can only mean the base64 was malformed.
+      return false;
+    }
+
+    return $decoded;
+  }
+}
+
+/**
  * Admin: work_category term meta (nor_tagline)
  * - Adds "Tagline" field to Add/Edit screens
  * - Saves to term meta key: nor_tagline
@@ -3984,33 +5164,40 @@ function nor_work_category_tagline_add_form_fields() {
   ?>
   <div class="form-field term-nor-tagline-wrap">
     <label for="nor_tagline">タグライン</label>
-    <input name="nor_tagline" id="nor_tagline" type="text" value="" class="regular-text" />
-    <p class="description">タイトルの下に表示される短いタグラインです。</p>
+    <input id="nor_tagline" type="text" value="" class="regular-text" />
+    <input type="hidden" id="nor_tagline_b64" name="nor_tagline_b64" value="" />
+    <p class="description">タイトルの下に表示される短いタグラインです。abbr（title）/ dfn（title）/ i / em / strong / code / cite / br / a（href, title, target, rel）のみ入力できます。</p>
   </div>
   <?php
+  nor_taxonomy_encoded_field_js('nor_tagline');
 }
 add_action('work_category_add_form_fields', 'nor_work_category_tagline_add_form_fields', 20);
 
 function nor_work_category_tagline_edit_form_fields($term) {
   $value = get_term_meta($term->term_id, 'nor_tagline', true);
   $value = is_string($value) ? $value : '';
+  $value_b64 = function_exists('nor_policies_encode_rich_storage')
+    ? nor_policies_encode_rich_storage($value)
+    : '';
   ?>
   <tr class="form-field term-nor-tagline-wrap">
     <th scope="row"><label for="nor_tagline">タグライン</label></th>
     <td>
-      <input name="nor_tagline" id="nor_tagline" type="text" value="<?php echo esc_attr($value); ?>" class="regular-text" />
-      <p class="description">タイトルの下に表示される短いタグラインです。</p>
+      <input id="nor_tagline" type="text" value="<?php echo esc_attr($value); ?>" class="regular-text" />
+      <input type="hidden" id="nor_tagline_b64" name="nor_tagline_b64" value="<?php echo esc_attr($value_b64); ?>" />
+      <p class="description">タイトルの下に表示される短いタグラインです。abbr（title）/ dfn（title）/ i / em / strong / code / cite / br / a（href, title, target, rel）のみ入力できます。</p>
     </td>
   </tr>
   <?php
+  nor_taxonomy_encoded_field_js('nor_tagline');
 }
 add_action('work_category_edit_form_fields', 'nor_work_category_tagline_edit_form_fields', 20);
 
 // Save meta (created)
 add_action('created_work_category', function ($term_id) {
-  if (!isset($_POST['nor_tagline'])) return;
-  $raw = wp_unslash($_POST['nor_tagline']);
-  $val = sanitize_text_field($raw);
+  $val = nor_taxonomy_encoded_field_decode('nor_tagline_b64');
+  if ($val === null || $val === false) return;
+  $val = nor_sanitize_inline_rich_text($val);
   $val = trim($val);
   if ($val === '') {
     delete_term_meta($term_id, 'nor_tagline');
@@ -4022,9 +5209,9 @@ add_action('created_work_category', function ($term_id) {
 // Save meta (edited)
 
 add_action('edited_work_category', function ($term_id) {
-  if (!isset($_POST['nor_tagline'])) return;
-  $raw = wp_unslash($_POST['nor_tagline']);
-  $val = sanitize_text_field($raw);
+  $val = nor_taxonomy_encoded_field_decode('nor_tagline_b64');
+  if ($val === null || $val === false) return;
+  $val = nor_sanitize_inline_rich_text($val);
   $val = trim($val);
   if ($val === '') {
     delete_term_meta($term_id, 'nor_tagline');
@@ -4033,64 +5220,24 @@ add_action('edited_work_category', function ($term_id) {
   update_term_meta($term_id, 'nor_tagline', $val);
 });
 
-
-
 /**
- * Admin: work_category term meta (nor_desc_en)
- * - Adds "Description (EN)" field to Add/Edit screens
- * - Saves to term meta key: nor_desc_en
+ * JA term description (WordPress standard field) for work_category/work_tag
+ * only: normalize to the same B "Inline rich text" allowlist as EN
+ * (nor_desc_en), regardless of the saving user's unfiltered_html capability.
+ * Core's own pre_term_description (wp_filter_kses, capability-gated) may
+ * also run; wp_kses is idempotent when narrowing, so running both in either
+ * order still lands on the B allowlist. Scoped to these two taxonomies only
+ * — every other taxonomy's description is untouched.
  */
-
-// Add form (new term)
-add_action('work_category_add_form_fields', function () {
-  ?>
-  <div class="form-field term-nor-desc-en-wrap">
-    <label for="nor_desc_en">説明（EN）</label>
-    <textarea name="nor_desc_en" id="nor_desc_en" rows="5" cols="40" class="large-text"></textarea>
-    <p class="description">英語の説明です。日本語は組み込みの説明フィールドに入力します。</p>
-  </div>
-  <?php
-});
-
-// Edit form (existing term)
-add_action('work_category_edit_form_fields', function ($term) {
-  $value = get_term_meta($term->term_id, 'nor_desc_en', true);
-  $value = is_string($value) ? $value : '';
-  ?>
-  <tr class="form-field term-nor-desc-en-wrap">
-    <th scope="row"><label for="nor_desc_en">説明（EN）</label></th>
-    <td>
-      <textarea name="nor_desc_en" id="nor_desc_en" rows="5" cols="50" class="large-text"><?php echo esc_textarea($value); ?></textarea>
-      <p class="description">英語の説明です。日本語は組み込みの説明フィールドに入力します。</p>
-    </td>
-  </tr>
-  <?php
-});
-
-// Save meta
-add_action('created_work_category', function ($term_id) {
-  if (!isset($_POST['nor_desc_en'])) return;
-  $raw = wp_unslash($_POST['nor_desc_en']);
-  $val = wp_kses_post($raw);
-  $val = trim($val);
-  if ($val === '') {
-    delete_term_meta($term_id, 'nor_desc_en');
-    return;
+add_filter('wp_insert_term_data', function ($data, $taxonomy) {
+  if (!in_array($taxonomy, ['work_category', 'work_tag'], true)) {
+    return $data;
   }
-  update_term_meta($term_id, 'nor_desc_en', $val);
-});
-
-add_action('edited_work_category', function ($term_id) {
-  if (!isset($_POST['nor_desc_en'])) return;
-  $raw = wp_unslash($_POST['nor_desc_en']);
-  $val = wp_kses_post($raw);
-  $val = trim($val);
-  if ($val === '') {
-    delete_term_meta($term_id, 'nor_desc_en');
-    return;
+  if (isset($data['description']) && is_string($data['description'])) {
+    $data['description'] = nor_sanitize_inline_rich_text($data['description']);
   }
-  update_term_meta($term_id, 'nor_desc_en', $val);
-});
+  return $data;
+}, 10, 2);
 
 /**
  * Admin list tables: customize columns for Categories / Tags
@@ -4112,7 +5259,7 @@ $nor_admin_render_term_meta_multiline = function ($val): string {
   return nl2br(esc_html($v));
 };
 
- $nor_register_tax_admin_columns = function (string $tax) use ($nor_admin_render_term_meta_plain, $nor_admin_render_term_meta_multiline) {
+$nor_register_tax_admin_columns = function (string $tax) use ($nor_admin_render_term_meta_plain, $nor_admin_render_term_meta_multiline) {
   // Columns
   add_filter("manage_edit-{$tax}_columns", function ($cols) use ($tax) {
     // Keep checkbox if present
@@ -4204,6 +5351,73 @@ $nor_register_tax_admin_columns('work_tag');
 $nor_register_tax_admin_columns('work_client');
 
 /**
+ * Admin: work_industry list — replace the standard "Count" column.
+ *
+ * work_industry is registered on the `works` post type only for legacy/API
+ * reasons; industries are actually assigned per work_client (term meta
+ * `nor_industry`, a single work_industry term ID), never directly on a Work.
+ * So WordPress core's standard Count column (wp_term_taxonomy.count, i.e.
+ * published `works` posts carrying this term) is essentially meaningless
+ * here — what matters for admin purposes is how many clients use each
+ * industry. That count is unrelated to `nor_mask_enabled` (masking only
+ * hides a client's public name/URL, not its industry assignment).
+ *
+ * Kept isolated from $nor_register_tax_admin_columns() above: work_industry
+ * doesn't share work_client's extra fields (nor_desc_en/nor_tagline/etc.),
+ * so it gets its own minimal column swap instead of reusing that helper.
+ */
+if (!function_exists('nor_get_work_industry_client_counts')) {
+  function nor_get_work_industry_client_counts(): array {
+    static $counts = null;
+    if ($counts !== null) return $counts;
+
+    global $wpdb;
+    $counts = [];
+
+    // Single query: for every work_client term with a `nor_industry` value,
+    // group-count by that value. Avoids one get_term_meta() query per row.
+    $rows = $wpdb->get_results(
+      "SELECT tm.meta_value AS industry_id, COUNT(*) AS client_count
+       FROM {$wpdb->termmeta} tm
+       INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = tm.term_id AND tt.taxonomy = 'work_client'
+       WHERE tm.meta_key = 'nor_industry'
+       GROUP BY tm.meta_value"
+    );
+
+    if (is_array($rows)) {
+      foreach ($rows as $row) {
+        $industry_id = (int) ($row->industry_id ?? 0);
+        if ($industry_id <= 0) continue;
+        $counts[$industry_id] = (int) ($row->client_count ?? 0);
+      }
+    }
+
+    return $counts;
+  }
+}
+
+add_filter('manage_edit-work_industry_columns', function ($columns) {
+  $new = [];
+  foreach ($columns as $key => $label) {
+    if ($key === 'posts') {
+      $new['nor_client_count'] = 'クライアント数';
+      continue;
+    }
+    $new[$key] = $label;
+  }
+  if (!isset($new['nor_client_count'])) {
+    $new['nor_client_count'] = 'クライアント数';
+  }
+  return $new;
+});
+
+add_filter('manage_work_industry_custom_column', function ($content, $column_name, $term_id) {
+  if ($column_name !== 'nor_client_count') return $content;
+  $counts = nor_get_work_industry_client_counts();
+  return (string) ($counts[(int) $term_id] ?? 0);
+}, 10, 3);
+
+/**
  * Admin: term meta (nor_desc_en) for tag-group taxonomies
  * - Adds "Description (EN)" field to Add/Edit screens
  * - Saves to term meta key: nor_desc_en
@@ -4221,32 +5435,39 @@ $nor_register_term_desc_en = function (string $tax, string $help_label) {
     ?>
     <div class="form-field term-nor-desc-en-wrap">
       <label for="nor_desc_en">説明（EN）</label>
-      <textarea name="nor_desc_en" id="nor_desc_en" rows="5" cols="40" class="large-text"></textarea>
-      <p class="description">英語の説明です。日本語は組み込みの説明フィールドに入力します。</p>
+      <textarea id="nor_desc_en" rows="5" cols="40" class="large-text"></textarea>
+      <input type="hidden" id="nor_desc_en_b64" name="nor_desc_en_b64" value="" />
+      <p class="description">英語の説明です。日本語は組み込みの説明フィールドに入力します。abbr（title）/ dfn（title）/ i / em / strong / code / cite / br / a（href, title, target, rel）のみ入力できます。</p>
     </div>
     <?php
+    nor_taxonomy_encoded_field_js('nor_desc_en');
   });
 
   // Edit form (existing term)
   add_action("{$tax}_edit_form_fields", function ($term) use ($help_label) {
     $value = get_term_meta($term->term_id, 'nor_desc_en', true);
     $value = is_string($value) ? $value : '';
+    $value_b64 = function_exists('nor_policies_encode_rich_storage')
+      ? nor_policies_encode_rich_storage($value)
+      : '';
     ?>
     <tr class="form-field term-nor-desc-en-wrap">
       <th scope="row"><label for="nor_desc_en">説明（EN）</label></th>
       <td>
-        <textarea name="nor_desc_en" id="nor_desc_en" rows="5" cols="50" class="large-text"><?php echo esc_textarea($value); ?></textarea>
-        <p class="description">英語の説明です。日本語は組み込みの説明フィールドに入力します。</p>
+        <textarea id="nor_desc_en" rows="5" cols="50" class="large-text"><?php echo esc_textarea($value); ?></textarea>
+        <input type="hidden" id="nor_desc_en_b64" name="nor_desc_en_b64" value="<?php echo esc_attr($value_b64); ?>" />
+        <p class="description">英語の説明です。日本語は組み込みの説明フィールドに入力します。abbr（title）/ dfn（title）/ i / em / strong / code / cite / br / a（href, title, target, rel）のみ入力できます。</p>
       </td>
     </tr>
     <?php
+    nor_taxonomy_encoded_field_js('nor_desc_en');
   });
 
   // Save meta (created)
   add_action("created_{$tax}", function ($term_id) {
-    if (!isset($_POST['nor_desc_en'])) return;
-    $raw = wp_unslash($_POST['nor_desc_en']);
-    $val = wp_kses_post($raw);
+    $val = nor_taxonomy_encoded_field_decode('nor_desc_en_b64');
+    if ($val === null || $val === false) return;
+    $val = nor_sanitize_inline_rich_text($val);
     $val = trim($val);
     if ($val === '') {
       delete_term_meta($term_id, 'nor_desc_en');
@@ -4257,9 +5478,9 @@ $nor_register_term_desc_en = function (string $tax, string $help_label) {
 
   // Save meta (edited)
   add_action("edited_{$tax}", function ($term_id) {
-    if (!isset($_POST['nor_desc_en'])) return;
-    $raw = wp_unslash($_POST['nor_desc_en']);
-    $val = wp_kses_post($raw);
+    $val = nor_taxonomy_encoded_field_decode('nor_desc_en_b64');
+    if ($val === null || $val === false) return;
+    $val = nor_sanitize_inline_rich_text($val);
     $val = trim($val);
     if ($val === '') {
       delete_term_meta($term_id, 'nor_desc_en');
@@ -4271,9 +5492,9 @@ $nor_register_term_desc_en = function (string $tax, string $help_label) {
 
 // Register for tag taxonomy
 add_action('init', function () use ($nor_register_term_desc_en) {
+  $nor_register_term_desc_en('work_category', 'Categories');
   $nor_register_term_desc_en('work_tag', 'Tags');
 }, 30);
-
 
 /**
  * Admin: work_tag term meta (nor_tagline)
@@ -4285,33 +5506,40 @@ function nor_work_tag_tagline_add_form_fields() {
   ?>
   <div class="form-field term-nor-tagline-wrap">
     <label for="nor_tagline">タグライン</label>
-    <input name="nor_tagline" id="nor_tagline" type="text" value="" class="regular-text" />
-    <p class="description">タイトルの下に表示される短いタグラインです。</p>
+    <input id="nor_tagline" type="text" value="" class="regular-text" />
+    <input type="hidden" id="nor_tagline_b64" name="nor_tagline_b64" value="" />
+    <p class="description">タイトルの下に表示される短いタグラインです。abbr（title）/ dfn（title）/ i / em / strong / code / cite / br / a（href, title, target, rel）のみ入力できます。</p>
   </div>
   <?php
+  nor_taxonomy_encoded_field_js('nor_tagline');
 }
 add_action('work_tag_add_form_fields', 'nor_work_tag_tagline_add_form_fields', 20);
 
 function nor_work_tag_tagline_edit_form_fields($term) {
   $value = get_term_meta($term->term_id, 'nor_tagline', true);
   $value = is_string($value) ? $value : '';
+  $value_b64 = function_exists('nor_policies_encode_rich_storage')
+    ? nor_policies_encode_rich_storage($value)
+    : '';
   ?>
   <tr class="form-field term-nor-tagline-wrap">
     <th scope="row"><label for="nor_tagline">タグライン</label></th>
     <td>
-      <input name="nor_tagline" id="nor_tagline" type="text" value="<?php echo esc_attr($value); ?>" class="regular-text" />
-      <p class="description">タイトルの下に表示される短いタグラインです。</p>
+      <input id="nor_tagline" type="text" value="<?php echo esc_attr($value); ?>" class="regular-text" />
+      <input type="hidden" id="nor_tagline_b64" name="nor_tagline_b64" value="<?php echo esc_attr($value_b64); ?>" />
+      <p class="description">タイトルの下に表示される短いタグラインです。abbr（title）/ dfn（title）/ i / em / strong / code / cite / br / a（href, title, target, rel）のみ入力できます。</p>
     </td>
   </tr>
   <?php
+  nor_taxonomy_encoded_field_js('nor_tagline');
 }
 add_action('work_tag_edit_form_fields', 'nor_work_tag_tagline_edit_form_fields', 20);
 
 // Save meta (created)
 add_action('created_work_tag', function ($term_id) {
-  if (!isset($_POST['nor_tagline'])) return;
-  $raw = wp_unslash($_POST['nor_tagline']);
-  $val = sanitize_text_field($raw);
+  $val = nor_taxonomy_encoded_field_decode('nor_tagline_b64');
+  if ($val === null || $val === false) return;
+  $val = nor_sanitize_inline_rich_text($val);
   $val = trim($val);
   if ($val === '') {
     delete_term_meta($term_id, 'nor_tagline');
@@ -4322,9 +5550,9 @@ add_action('created_work_tag', function ($term_id) {
 
 // Save meta (edited)
 add_action('edited_work_tag', function ($term_id) {
-  if (!isset($_POST['nor_tagline'])) return;
-  $raw = wp_unslash($_POST['nor_tagline']);
-  $val = sanitize_text_field($raw);
+  $val = nor_taxonomy_encoded_field_decode('nor_tagline_b64');
+  if ($val === null || $val === false) return;
+  $val = nor_sanitize_inline_rich_text($val);
   $val = trim($val);
   if ($val === '') {
     delete_term_meta($term_id, 'nor_tagline');
@@ -4382,7 +5610,13 @@ add_action('pre_get_posts', function ($q) {
     $q->set('posts_per_page', nor_get_works_archive_per_page());
     $q->set('orderby', 'date');
     $q->set('order', 'DESC');
-    $q->set('offset', 0);
+    // Do NOT set 'offset' here: WP_Query treats any explicitly-set offset
+    // (including 0) as an override that replaces its normal
+    // (paged - 1) * posts_per_page calculation -- so every page, not just
+    // page 1, queried from offset 0 and showed the same first 12 posts.
+    // Leaving 'offset' unset (its default) lets 'paged' (already correct --
+    // set directly by the '^archives/{year}/page/{n}/' rewrite rule) drive
+    // pagination the normal way.
     return;
   }
 
@@ -4422,6 +5656,24 @@ add_action('pre_get_posts', function ($q) {
     $q->set('orderby', 'date');
     $q->set('order', 'DESC');
   }
+});
+
+// Main site feed (/feed/): include Works alongside Writings (post) so it
+// surfaces both. is_home() is unreliable here (this site has a static front
+// page with no "Posts page" assigned, so is_home() is false even for the
+// site's own default feed — confirmed by direct inspection in production).
+// Instead, positively narrow to "a feed that isn't tied to any archive,
+// search, singular, or comment context" — on a site with no separate blog
+// index, that combination only ever matches the bare /feed/ request.
+// Post-type archive feeds (/works/feed/), taxonomy feeds
+// (/categories/{term}/feed/, etc.), and comment feeds are excluded via
+// is_archive() / is_search() / is_singular() / is_comment_feed() below.
+add_action('pre_get_posts', function ($q) {
+  if (is_admin() || !$q->is_main_query()) return;
+  if (!$q->is_feed() || $q->is_comment_feed()) return;
+  if ($q->is_archive() || $q->is_search() || $q->is_singular()) return;
+
+  $q->set('post_type', ['post', 'works']);
 });
 
 // Fix max_num_pages for the Works archive when using offset.
@@ -4465,6 +5717,18 @@ add_action('init', function () {
   add_rewrite_rule('^writings/page/([0-9]{1,})/?$', 'index.php?pagename=writings&paged=$matches[1]', 'top');
 });
 
+// Search list pagination: /search/page/{n}/ -> pagename=search + paged=n.
+// Without this, WordPress's own built-in `search/(.+)` rewrite rule (for
+// pretty search URLs) intercepts the path first and treats "page/2" as the
+// literal search term (?s=page/2), instead of routing to the "search" fixed
+// page at all — the theme has no search.php, so that falls through to
+// index.php's empty-state message. This top-priority rule takes precedence
+// over core's search rule and keeps `q` (a plain query-string arg, unrelated
+// to path rewriting) intact for the "search" page's own Works query.
+add_action('init', function () {
+  add_rewrite_rule('^search/page/([0-9]{1,})/?$', 'index.php?pagename=search&paged=$matches[1]', 'top');
+});
+
 add_filter('template_include', function ($template) {
   $year = get_query_var('nor_year');
   if ($year) {
@@ -4475,37 +5739,13 @@ add_filter('template_include', function ($template) {
 });
 
 add_filter('nav_menu_link_attributes', function ($atts, $item, $args) {
-  // Default behavior
+  // aria-current="page" must only describe the actual current page (an exact
+  // link match), never a whole section — the visual "Active" look for the
+  // Clients section (including child pages like Index by Industry, whose
+  // own link differs from the "Clients" item's target) is handled purely via
+  // CSS against the current/ancestor classes added by nav_menu_css_class
+  // below, not via this attribute.
   if (!empty($item->current)) {
-    $atts['aria-current'] = 'page';
-    return $atts;
-  }
-
-  // Custom: keep "Clients" highlighted across its child pages (/clients/iot/, /clients/industries/, ...)
-  if (!is_page()) return $atts;
-
-  $clients_page = get_page_by_path('clients');
-  $clients_id = ($clients_page instanceof WP_Post) ? (int) $clients_page->ID : 0;
-  if ($clients_id <= 0) return $atts;
-
-  $qo = get_queried_object();
-  if (!($qo instanceof WP_Post)) return $atts;
-
-  $qid = (int) $qo->ID;
-  $anc = get_post_ancestors($qo);
-  $is_clients_tree = ($qid === $clients_id) || (is_array($anc) && in_array($clients_id, $anc, true));
-  if (!$is_clients_tree) return $atts;
-
-  if (!isset($item->url)) return $atts;
-
-  $item_url = (string) ($item->url ?? '');
-  if ($item_url === '') return $atts;
-
-  $item_path = wp_parse_url($item_url, PHP_URL_PATH);
-  $item_path = is_string($item_path) ? untrailingslashit($item_path) : '';
-
-  // Target any menu item that lives under /clients/ (e.g. /clients/, /clients/iot/, /clients/industries/)
-  if ($item_path !== '' && (strpos($item_path . '/', '/clients/') === 0)) {
     $atts['aria-current'] = 'page';
   }
 
@@ -4514,18 +5754,24 @@ add_filter('nav_menu_link_attributes', function ($atts, $item, $args) {
 
 add_filter('nav_menu_css_class', function ($classes, $item, $args) {
   // Mirror the same logic as aria-current, but via CSS classes
-  if (!is_page()) return $classes;
-
-  $clients_page = get_page_by_path('clients');
-  $clients_id = ($clients_page instanceof WP_Post) ? (int) $clients_page->ID : 0;
-  if ($clients_id <= 0) return $classes;
-
-  $qo = get_queried_object();
-  if (!($qo instanceof WP_Post)) return $classes;
-
-  $qid = (int) $qo->ID;
-  $anc = get_post_ancestors($qo);
-  $is_clients_tree = ($qid === $clients_id) || (is_array($anc) && in_array($clients_id, $anc, true));
+  $is_clients_tree = false;
+  if (is_page()) {
+    $clients_page = get_page_by_path('clients');
+    $clients_id = ($clients_page instanceof WP_Post) ? (int) $clients_page->ID : 0;
+    if ($clients_id > 0) {
+      $qo = get_queried_object();
+      if ($qo instanceof WP_Post) {
+        $qid = (int) $qo->ID;
+        $anc = get_post_ancestors($qo);
+        $is_clients_tree = ($qid === $clients_id) || (is_array($anc) && in_array($clients_id, $anc, true));
+      }
+    }
+  } elseif (function_exists('is_tax') && (is_tax('work_client') || is_tax('work_industry'))) {
+    // Client/Industry term archives (/clients/{slug}/, any pagination) have
+    // no WP_Post ancestor relationship to the "clients" page at all -- same
+    // gap as Category/Tag/year-Archive below, fixed the same way.
+    $is_clients_tree = true;
+  }
   if (!$is_clients_tree) return $classes;
 
   if (!isset($item->url)) return $classes;
@@ -4537,10 +5783,18 @@ add_filter('nav_menu_css_class', function ($classes, $item, $args) {
   $item_path = is_string($item_path) ? untrailingslashit($item_path) : '';
 
   if ($item_path !== '' && (strpos($item_path . '/', '/clients/') === 0)) {
-    $classes[] = 'current-menu-item';
-    $classes[] = 'current_page_item';
-    $classes[] = 'current-menu-ancestor';
-    $classes[] = 'current_page_ancestor';
+    // De-dupe: when the current item IS the exact Page being viewed (e.g.
+    // this same menu item linking straight to a fixed child page like
+    // "Clients - Index by Initial"), WP core's own nav-menu class logic has
+    // already added these same classes before this filter runs -- this
+    // filter's job is only to *add* them for the cases core doesn't cover
+    // (term archives with no Page ancestor), not to assume they're absent.
+    $classes = array_values(array_unique(array_merge($classes, [
+      'current-menu-item',
+      'current_page_item',
+      'current-menu-ancestor',
+      'current_page_ancestor',
+    ])));
   }
 
   return $classes;
@@ -4550,23 +5804,13 @@ add_filter('nav_menu_css_class', function ($classes, $item, $args) {
 // the Writings page, but posts have no post_parent/ancestor relationship to
 // pages in WP's data model, so core's own current-menu-ancestor logic never
 // fires here. Identify the Writings menu item by its linked object (a Page),
-// not by comparing URL strings.
-add_filter('nav_menu_link_attributes', function ($atts, $item, $args) {
-  if (!is_singular('post')) return $atts;
-  if (!isset($item->object, $item->type, $item->object_id)) return $atts;
-  if ($item->type !== 'post_type' || $item->object !== 'page') return $atts;
-
-  $writings_page = get_page_by_path('writings');
-  $writings_id = ($writings_page instanceof WP_Post) ? (int) $writings_page->ID : 0;
-  if ($writings_id <= 0) return $atts;
-
-  if ((int) $item->object_id === $writings_id) {
-    $atts['aria-current'] = 'page';
-  }
-
-  return $atts;
-}, 10, 3);
-
+// not by comparing URL strings. Visual "Active" state only — no
+// nav_menu_link_attributes counterpart: aria-current="page" must only
+// describe the actual current page (the "Writings" item's own link,
+// /writings/, isn't the current URL on a Writing detail page), so it's left
+// to native $item->current (which never fires true here). The visual look
+// is carried entirely by these classes, matching nor.ui.css's
+// .current-menu-ancestor/.current_page_ancestor selectors.
 add_filter('nav_menu_css_class', function ($classes, $item, $args) {
   if (!is_singular('post')) return $classes;
   if (!isset($item->object, $item->type, $item->object_id)) return $classes;
@@ -4577,10 +5821,101 @@ add_filter('nav_menu_css_class', function ($classes, $item, $args) {
   if ($writings_id <= 0) return $classes;
 
   if ((int) $item->object_id === $writings_id) {
-    $classes[] = 'current-menu-item';
-    $classes[] = 'current_page_item';
-    $classes[] = 'current-menu-ancestor';
-    $classes[] = 'current_page_ancestor';
+    // De-dupe: see the Clients-tree filter above for why this can't just
+    // unconditionally push -- core may have already added some of these.
+    $classes = array_values(array_unique(array_merge($classes, [
+      'current-menu-item',
+      'current_page_item',
+      'current-menu-ancestor',
+      'current_page_ancestor',
+    ])));
+  }
+
+  return $classes;
+}, 10, 3);
+
+// Category/Tag detail (/categories/{slug}/, /tags/{slug}/, any depth or
+// pagination) and the Works year Archive (/archives/{year}/) are the same
+// class of gap as the Clients-tree filter above: a work_category/work_tag
+// term, or a Works year archive, has no WP_Post ancestor relationship to the
+// "categories"/"tags"/"archives" fixed page at all, so core's own
+// current-menu-ancestor logic never fires. Matched by the *menu item's own*
+// resolved URL path prefix (same technique as the Clients-tree filter,
+// chosen because it works whether admin set that item up as a Page link or
+// a Custom Link) -- never by comparing against the current request's URL,
+// and never by any individual term slug, so this covers any current or
+// future category/tag (including nested work_tag children) and any year
+// with no per-term/per-year hardcoding.
+add_filter('nav_menu_css_class', function ($classes, $item, $args) {
+  $section_path_prefix = '';
+  if (function_exists('is_tax') && is_tax('work_category')) {
+    $section_path_prefix = '/categories/';
+  } elseif (function_exists('is_tax') && is_tax('work_tag')) {
+    $section_path_prefix = '/tags/';
+  } elseif (
+    function_exists('is_post_type_archive') && is_post_type_archive('works')
+    && trim((string) get_query_var('nor_year')) !== ''
+  ) {
+    $section_path_prefix = '/archives/';
+  }
+  if ($section_path_prefix === '') return $classes;
+
+  if (!isset($item->url)) return $classes;
+
+  $item_url = (string) ($item->url ?? '');
+  if ($item_url === '') return $classes;
+
+  $item_path = wp_parse_url($item_url, PHP_URL_PATH);
+  $item_path = is_string($item_path) ? untrailingslashit($item_path) : '';
+
+  if ($item_path !== '' && (strpos($item_path . '/', $section_path_prefix) === 0)) {
+    // De-dupe: see the Clients-tree filter above for why this can't just
+    // unconditionally push -- core may have already added some of these
+    // (e.g. this same item also being the exact Page currently viewed).
+    $classes = array_values(array_unique(array_merge($classes, [
+      'current-menu-item',
+      'current_page_item',
+      'current-menu-ancestor',
+      'current_page_ancestor',
+    ])));
+  }
+
+  return $classes;
+}, 10, 3);
+
+// Search (fixed page "search", e.g. /search/, /search/page/2/): running an
+// actual search (?q=...) doesn't change is_page('search') at all -- nør.
+// reads $_GET['q'] directly in page-search.php, it's never registered as a
+// WP query var -- but WordPress core's own exact-URL-string current-item
+// match (and this theme's own aria-current, which mirrors $item->current)
+// compares the *full* current URL, including the query string, against the
+// menu item's own URL. A bare "/search/" link stops matching the moment
+// "?q=..." is appended, so the Search item loses its current state right
+// when someone actually searches. Matched by the *menu item's own* URL path
+// prefix (same technique as the Clients/Category/Tag/Archives filters
+// above) so it works whether admin configured this item as a Page link or
+// a Custom Link. Mutates $item->current directly (not just the class
+// array) so this theme's own nav_menu_link_attributes filter picks it up
+// for aria-current too -- $item is the same object instance read by both
+// filters within the same Walker_Nav_Menu::start_el() call. No ancestor
+// classes here (unlike Clients/Category/Tag/Archives): Search has no
+// separate "list vs detail" levels, the item IS the exact current page.
+add_filter('nav_menu_css_class', function ($classes, $item, $args) {
+  if (!(function_exists('is_page') && is_page('search'))) return $classes;
+  if (!isset($item->url)) return $classes;
+
+  $item_url = (string) ($item->url ?? '');
+  if ($item_url === '') return $classes;
+
+  $item_path = wp_parse_url($item_url, PHP_URL_PATH);
+  $item_path = is_string($item_path) ? untrailingslashit($item_path) : '';
+
+  if ($item_path !== '' && (strpos($item_path . '/', '/search/') === 0)) {
+    $item->current = true;
+    $classes = array_values(array_unique(array_merge($classes, [
+      'current-menu-item',
+      'current_page_item',
+    ])));
   }
 
   return $classes;
@@ -4605,14 +5940,14 @@ add_filter('nav_menu_css_class', function ($classes, $item, $args) {
  * - categories
  * - tags
  * - clients
- * - iot
- * - industries
+ * - index-by-initial
+ * - index-by-industry
  */
 add_action('add_meta_boxes_page', function ($post) {
   if (!$post instanceof WP_Post) return;
 
   $slug = $post->post_name;
-  $targets = ['categories', 'tags', 'archives', 'clients', 'iot', 'industries', 'search', 'about', 'policies', 'notes', 'faqs', 'contact', 'writings'];
+  $targets = ['categories', 'tags', 'archives', 'clients', 'index-by-initial', 'index-by-industry', 'search', 'about', 'policies', 'notes', 'faqs', 'contact', 'writings'];
   if (!in_array($slug, $targets, true)) return;
 
   add_meta_box(
@@ -4668,7 +6003,7 @@ add_action('save_post_page', function ($post_id) {
   if (!current_user_can('edit_page', $post_id)) return;
 
   $slug = get_post_field('post_name', $post_id);
-  $targets = ['categories', 'tags', 'archives', 'clients', 'iot', 'industries', 'search', 'about', 'policies', 'notes', 'faqs', 'contact', 'writings'];
+  $targets = ['categories', 'tags', 'archives', 'clients', 'index-by-initial', 'index-by-industry', 'search', 'about', 'policies', 'notes', 'faqs', 'contact', 'writings'];
   if (!in_array($slug, $targets, true)) return;
 
   if (!isset($_POST['nor_landing_page_copy_nonce']) || !wp_verify_nonce($_POST['nor_landing_page_copy_nonce'], 'nor_landing_page_copy_save')) return;
@@ -4744,7 +6079,7 @@ add_action('save_post_page', function ($post_id) {
  *   - nor_robots_override
  */
 function nor_seo_meta_target_page_slugs(): array {
-  return ['categories', 'tags', 'archives', 'clients', 'iot', 'industries', 'search', 'about', 'policies', 'notes', 'faqs', 'contact', 'writings'];
+  return ['categories', 'tags', 'archives', 'clients', 'index-by-initial', 'index-by-industry', 'search', 'about', 'policies', 'notes', 'faqs', 'contact', 'writings'];
 }
 
 function nor_is_seo_meta_target_post(WP_Post $post): bool {
@@ -4813,6 +6148,46 @@ function nor_seo_meta_normalize_url(string $raw): string {
   return (string) esc_url_raw($normalized);
 }
 
+/**
+ * Collapse a multi-line plain-text value (Excerpt / SEO description
+ * overrides / etc.) into a single line, CJK-aware.
+ *
+ * A line break right after a CJK punctuation mark (U+3000-U+303F — e.g.
+ * 。 、) already has its own sentence-final spacing in Japanese, so it is
+ * removed unconditionally, regardless of what follows. A line break
+ * between two other CJK/fullwidth characters is also removed. Any other
+ * line break (e.g. a CJK/Latin boundary, or a wrapped English sentence) is
+ * left for the final \s+ collapse below, which turns it into a single
+ * space so words don't merge.
+ *
+ * $strip_tags is an explicit per-caller switch (not a guess from content):
+ * some callers' input can contain raw HTML tags (e.g. hand-typed SEO
+ * description overrides), others' cannot (e.g. get_the_excerpt(), already
+ * tag-free by the time it reaches here) — each caller states which applies
+ * to it, rather than this function stripping tags for everyone or no one.
+ */
+function nor_normalize_single_line_text(string $text, bool $strip_tags = false): string {
+  $text = trim($text);
+  if ($text === '') return '';
+  if ($strip_tags) {
+    $text = wp_strip_all_tags($text);
+  }
+  $cjk = '\x{3000}-\x{303F}\x{3040}-\x{30FF}\x{31F0}-\x{31FF}\x{3400}-\x{4DBF}\x{4E00}-\x{9FFF}\x{FF00}-\x{FFEF}';
+  $cjk_punct = '\x{3000}-\x{303F}';
+  $text = (string) preg_replace(
+    '/([' . $cjk_punct . '])[ \t]*\R[ \t]*/u',
+    '$1',
+    $text
+  );
+  $text = (string) preg_replace(
+    '/([' . $cjk . '])[ \t]*\R[ \t]*(?=[' . $cjk . '])/u',
+    '$1',
+    $text
+  );
+  $text = (string) preg_replace('/\s+/u', ' ', $text);
+  return trim($text);
+}
+
 function nor_render_seo_meta_box(WP_Post $post): void {
   if (!nor_is_seo_meta_target_post($post)) return;
   $env_type = function_exists('nor_get_environment_type') ? nor_get_environment_type() : 'production';
@@ -4825,6 +6200,7 @@ function nor_render_seo_meta_box(WP_Post $post): void {
   $desc_en_override = get_post_meta($post->ID, 'nor_meta_desc_en_override', true);
   $canonical_override = get_post_meta($post->ID, 'nor_canonical_override', true);
   $og_image_override = get_post_meta($post->ID, 'nor_og_image_override', true);
+  $og_image_mask_override = get_post_meta($post->ID, 'nor_og_image_mask_override', true);
   $og_title_override = get_post_meta($post->ID, 'nor_og_title_override', true);
   $robots_override = get_post_meta($post->ID, 'nor_robots_override', true);
 
@@ -4833,30 +6209,23 @@ function nor_render_seo_meta_box(WP_Post $post): void {
   $desc_en_override = is_string($desc_en_override) ? trim($desc_en_override) : '';
   $canonical_override = is_string($canonical_override) ? trim($canonical_override) : '';
   $og_image_override = is_string($og_image_override) ? trim($og_image_override) : '';
+  $og_image_mask_override = is_string($og_image_mask_override) ? trim($og_image_mask_override) : '';
   $og_title_override = is_string($og_title_override) ? trim($og_title_override) : '';
   $robots_override = is_string($robots_override) ? trim($robots_override) : '';
 
   $is_works = ($post->post_type === 'works');
   // Writings (post) share the exact same "rich" SEO treatment as Works
-  // (featured-image OG, excerpt+nor_summary_en descriptions, reflect button).
+  // (excerpt+nor_summary_en descriptions, reflect button).
   $is_writing = ($post->post_type === 'post');
   $seo_rich = ($is_works || $is_writing);
-  $has_featured = $seo_rich ? has_post_thumbnail($post->ID) : false;
   $has_custom_og = (trim($og_image_override) !== '');
-  $default_og_image = trim((string) get_option('nor_default_og_image_override', ''));
-  $featured_og = '';
-  if ($seo_rich && $has_featured) {
-    $thumb = get_the_post_thumbnail_url($post->ID, 'full');
-    if (is_string($thumb) && $thumb !== '') $featured_og = $thumb;
-  }
-  $uses_default_og = (!$has_custom_og && $featured_og === '');
 
+  // Collapses a multi-line body value (Excerpt / nor_desc_ja) into the
+  // single-line SEO/LLMO description, CJK-aware. This admin-side value can
+  // contain raw HTML tags (hand-typed overrides), so strip_tags is on.
+  // See nor_normalize_single_line_text() for the full rationale.
   $normalize_meta_line = static function (string $text): string {
-    $text = trim($text);
-    if ($text === '') return '';
-    $text = wp_strip_all_tags($text);
-    $text = (string) preg_replace('/\s+/u', ' ', $text);
-    return trim($text);
+    return nor_normalize_single_line_text($text, true);
   };
 
   $site_name_for_title = 'nør. Ryousuke Tamura Design Office';
@@ -4907,16 +6276,26 @@ function nor_render_seo_meta_box(WP_Post $post): void {
     $normalized = (string) nor_seo_meta_normalize_url($canonical_auto);
     if ($normalized !== '') $canonical_auto = $normalized;
   }
-  $canonical_input = ($canonical_override !== '') ? $canonical_override : $canonical_auto;
+  // Show only the actually-saved override here — never the auto-computed
+  // fallback (same "show only the real saved state" rule as $og_image_input
+  // below) — so an unedited "Update"/"Publish" doesn't freeze $canonical_auto
+  // into nor_canonical_override as if it were an explicit per-entry choice.
+  // Before a post's slug is finalized, get_permalink() can return a
+  // query-string fallback (e.g. "?p=123"), which nor_seo_meta_normalize_url()
+  // then collapses to the bare site URL — that used to get saved as a real
+  // override the first time a brand-new post was published. $canonical_auto
+  // itself is kept (unused for value) and shown via the input's placeholder
+  // instead, so admins can still see the current auto-computed Canonical URL.
+  $canonical_input = $canonical_override;
 
+  // Show only the actually-saved override here — never a fallback (featured
+  // image / site default) — so an unedited "Update" doesn't freeze a
+  // fallback URL into nor_og_image_override as if it were an explicit
+  // per-entry choice. The notice below is unaffected: it already keys off
+  // $has_custom_og (the real saved state), not this display value.
   $og_image_input = $og_image_override;
-  if ($og_image_input === '') {
-    if ($featured_og !== '') {
-      $og_image_input = $featured_og;
-    } elseif ($default_og_image !== '') {
-      $og_image_input = $default_og_image;
-    }
-  }
+  // Same "show only the actually-saved value" rule as $og_image_input above.
+  $og_image_mask_input = $og_image_mask_override;
   // OG Title has its own auto value (ends in "nør.") for all three post types and
   // does not fall back through Title's own override, since they're generated
   // independently of one another.
@@ -4935,43 +6314,54 @@ function nor_render_seo_meta_box(WP_Post $post): void {
   // Shown for every SEO/LLMO target post type (Works, Writings, and every
   // target-slug page) — nor_render_seo_meta_box() is already gated to these
   // above, so this is unconditional rather than re-checking $seo_rich.
-  if (true) {
-    echo '<p style="margin-top:10px;">';
-    echo '<button type="button" class="button" id="nor_seo_apply_from_body">本文情報を反映</button>';
-    echo '<span id="nor_seo_apply_from_body_status" class="description" style="margin-left:8px;"></span>';
-    echo '</p>';
-    echo '<p class="description" style="margin-top:4px;">Title / Description（JA・EN）/ OG Title を本文入力欄の現在値から反映します。</p>';
-  }
+  echo '<p style="margin-top:10px;">';
+  echo '<button type="button" class="button" id="nor_seo_apply_from_body">本文情報を反映</button>';
+  echo '<span id="nor_seo_apply_from_body_status" class="description" style="margin-left:8px;"></span>';
+  echo '</p>';
+  echo '<p class="description" style="margin-top:4px;">Title / Description（JA・EN）/ OG Title を本文入力欄の現在値から反映します。</p>';
 
   echo '<p style="margin-top:12px;"><label for="nor_canonical_override"><strong>Canonical URL</strong></label></p>';
-  echo '<input name="nor_canonical_override" id="nor_canonical_override" type="text" class="widefat" value="' . esc_attr($canonical_input) . '" />';
+  echo '<input name="nor_canonical_override" id="nor_canonical_override" type="text" class="widefat" value="' . esc_attr($canonical_input) . '" placeholder="' . esc_attr($canonical_auto) . '" />';
 
   echo '<p style="margin-top:12px;"><label for="nor_og_image_override"><strong>OG image</strong></label></p>';
   echo '<div style="display:flex; gap:8px; align-items:center;">';
   echo '<input name="nor_og_image_override" id="nor_og_image_override" type="text" class="widefat" value="' . esc_attr($og_image_input) . '" />';
   echo '<button type="button" class="button nor-og-media-pick" data-target="nor_og_image_override">メディアから選択</button>';
   echo '</div>';
-  if ($uses_default_og) {
+  if (!$has_custom_og) {
+    // Regardless of whether a featured image exists: header.php's actual
+    // $og_image resolution has no featured-image fallback, so an unset
+    // nor_og_image_override always means the shared site default is what
+    // actually renders on the front end (og:image/twitter:image/etc.).
     echo '<p id="nor_og_image_default_warn" style="margin-top:6px; color:#b32d2e;"><strong>OG Image が個別設定されていません。現在はデフォルト画像が使用されます。</strong></p>';
-  } elseif (!$has_custom_og && $seo_rich && $has_featured) {
-    $og_source_label = $is_works ? 'Works' : 'Writing';
-    echo '<p class="description" style="margin-top:6px;">この' . esc_html($og_source_label) . 'はアイキャッチ画像をOG画像として使用します。</p>';
   } else {
     echo '<p class="description" style="margin-top:6px;">個別設定したOG画像が優先されます。</p>';
+  }
+
+  // Works only: a masked client's real deliverable/company name/logo can
+  // appear in the regular OG image above, so a Work with at least one
+  // masked work_client must never fall back to it. This field is that safe
+  // alternative — see header.php's nor_work_has_masked_client() check.
+  if ($is_works) {
+    $post_has_masked_client = function_exists('nor_work_has_masked_client') && nor_work_has_masked_client($post->ID);
+    echo '<p style="margin-top:12px;"><label for="nor_og_image_mask_override"><strong>伏せOG image</strong></label></p>';
+    echo '<div style="display:flex; gap:8px; align-items:center;">';
+    echo '<input name="nor_og_image_mask_override" id="nor_og_image_mask_override" type="text" class="widefat" value="' . esc_attr($og_image_mask_input) . '" />';
+    echo '<button type="button" class="button nor-og-media-pick" data-target="nor_og_image_mask_override">メディアから選択</button>';
+    echo '</div>';
+    // data-masked reflects the currently-saved work_client terms as of this
+    // page load only — re-attaching/removing a masked client isn't watched
+    // live (see refreshOgWarningState() below), a post-save reload already
+    // re-renders this correctly. JS only re-checks the input's own value.
+    $mask_warn_hidden = !$post_has_masked_client || ($og_image_mask_input !== '');
+    echo '<p id="nor_og_image_mask_warn" data-masked="' . ($post_has_masked_client ? '1' : '0') . '" style="margin-top:6px; color:#b32d2e;' . ($mask_warn_hidden ? ' display:none;' : '') . '"><strong>伏せ表示が指定されたクライアントが含まれています。伏せOG imageを登録してください。</strong></p>';
+    echo '<p class="description" style="margin-top:6px;">伏せクライアントが紐づくWorksで、通常のOG imageの代わりに使用する画像です。未設定の場合、このWorksが伏せ対象であればサイト共通のデフォルト画像が使用されます（通常のOG imageへは絶対にフォールバックしません）。</p>';
   }
 
   echo '<p style="margin-top:12px;"><label for="nor_og_title_override"><strong>OG Title</strong></label></p>';
   echo '<input name="nor_og_title_override" id="nor_og_title_override" type="text" class="widefat" value="' . esc_attr($og_title_input) . '" />';
 
-  $robots_default = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
-  $robots_options = [
-    '' => 'デフォルト（' . $robots_default . '）',
-    $robots_default => $robots_default,
-    'index, follow' => 'index, follow',
-    'noindex, follow' => 'noindex, follow',
-    'noindex, nofollow' => 'noindex, nofollow',
-    'index, nofollow' => 'index, nofollow',
-  ];
+  $robots_options = nor_get_robots_override_choices();
 
   echo '<p style="margin-top:12px;"><label for="nor_robots_override"><strong>robots</strong></label></p>';
   echo '<select name="nor_robots_override" id="nor_robots_override" class="widefat">';
@@ -4999,17 +6389,30 @@ function nor_render_seo_meta_box(WP_Post $post): void {
       function refreshOgWarningState() {
         var input = document.getElementById("nor_og_image_override");
         var warn = document.getElementById("nor_og_image_default_warn");
-        if (!input || !warn) return;
+        if (input && warn) {
+          var hasValue = String(input.value || "").trim() !== "";
+          warn.style.display = hasValue ? "none" : "";
+        }
 
-        var hasValue = String(input.value || "").trim() !== "";
-        warn.style.display = hasValue ? "none" : "";
+        // Works "伏せOG image" warning: data-masked is a static snapshot of
+        // nor_work_has_masked_client() taken at page render time (work_client
+        // term selection itself is not watched live — a post-save reload
+        // already re-renders it correctly). Only the mask-image input value itself
+        // is re-checked live here.
+        var maskInput = document.getElementById("nor_og_image_mask_override");
+        var maskWarn = document.getElementById("nor_og_image_mask_warn");
+        if (maskInput && maskWarn) {
+          var isMasked = maskWarn.getAttribute("data-masked") === "1";
+          var maskHasValue = String(maskInput.value || "").trim() !== "";
+          maskWarn.style.display = (isMasked && !maskHasValue) ? "" : "none";
+        }
       }
 
       document.addEventListener("input", function (e) {
-        if (e.target && e.target.id === "nor_og_image_override") refreshOgWarningState();
+        if (e.target && (e.target.id === "nor_og_image_override" || e.target.id === "nor_og_image_mask_override")) refreshOgWarningState();
       });
       document.addEventListener("change", function (e) {
-        if (e.target && e.target.id === "nor_og_image_override") refreshOgWarningState();
+        if (e.target && (e.target.id === "nor_og_image_override" || e.target.id === "nor_og_image_mask_override")) refreshOgWarningState();
       });
       document.addEventListener("submit", function (e) {
         var form = e.target;
@@ -5083,7 +6486,6 @@ function nor_render_seo_meta_box(WP_Post $post): void {
           input.value = media.url;
           input.dispatchEvent(new Event("input", { bubbles: true }));
           input.dispatchEvent(new Event("change", { bubbles: true }));
-          refreshOgWarningState();
         });
 
         frame.open();
@@ -5092,7 +6494,6 @@ function nor_render_seo_meta_box(WP_Post $post): void {
   </script>';
 
   // Shown for every SEO/LLMO target post type (see note above the button).
-  if (true) {
     $seo_section_label = $is_works ? 'Works' : ($is_writing ? 'Writings' : 'Page');
     echo '<script>
       (function () {
@@ -5105,6 +6506,23 @@ function nor_render_seo_meta_box(WP_Post $post): void {
           var s = String(text || "").trim();
           if (!s) return "";
           s = s.replace(/<[^>]*>/g, " ");
+          // A CJK punctuation mark (U+3000-U+303F, e.g. 。 、) already provides
+          // its own sentence-final spacing in Japanese, so a line break right
+          // after one is removed unconditionally, regardless of what follows
+          // (half-width alphanumeric spec text such as "A4" / "4C" included).
+          // This rule is intentionally one-sided and scoped to punctuation
+          // only, so it must run first: a boundary like "Design\n" + kanji
+          // still falls through to the general \\s+ collapse below and keeps
+          // its space.
+          s = s.replace(/([\\u3000-\\u303F])[ \\t]*(?:\\r\\n|\\r|\\n)[ \\t]*/g, "$1");
+          // A line break between two CJK/fullwidth characters carries no
+          // word-spacing meaning in Japanese, so collapse it to nothing (no
+          // lookbehind: the left-hand CJK character is captured and put
+          // back via $1, the right-hand side is checked with a lookahead).
+          // Any other line break — including one at a CJK/Latin boundary
+          // (e.g. "Design\n" + kanji) or a wrapped English sentence — is left
+          // for the \\s+ collapse below, which turns it into a single space.
+          s = s.replace(/([\\u3000-\\u303F\\u3040-\\u30FF\\u31F0-\\u31FF\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uFF00-\\uFFEF])[ \\t]*(?:\\r\\n|\\r|\\n)[ \\t]*(?=[\\u3000-\\u303F\\u3040-\\u30FF\\u31F0-\\u31FF\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uFF00-\\uFFEF])/g, "$1");
           s = s.replace(/\\s+/g, " ").trim();
           return s;
         }
@@ -5362,7 +6780,6 @@ function nor_render_seo_meta_box(WP_Post $post): void {
         });
       })();
     </script>';
-  }
 }
 
 add_action('add_meta_boxes_page', function ($post) {
@@ -5472,17 +6889,19 @@ add_action('save_post', function ($post_id, $post) {
     }
   }
 
+  if (isset($_POST['nor_og_image_mask_override'])) {
+    $raw = (string) wp_unslash($_POST['nor_og_image_mask_override']);
+    $val = nor_seo_meta_normalize_url($raw);
+    if ($val === '') {
+      delete_post_meta($post_id, 'nor_og_image_mask_override');
+    } else {
+      update_post_meta($post_id, 'nor_og_image_mask_override', $val);
+    }
+  }
+
   if (isset($_POST['nor_robots_override'])) {
     $raw = trim((string) wp_unslash($_POST['nor_robots_override']));
-    $robots_default = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
-    $allowed = [
-      '',
-      $robots_default,
-      'index, follow',
-      'noindex, follow',
-      'noindex, nofollow',
-      'index, nofollow',
-    ];
+    $allowed = array_keys(nor_get_robots_override_choices());
     if (!in_array($raw, $allowed, true) || $raw === '') {
       delete_post_meta($post_id, 'nor_robots_override');
     } else {
@@ -5840,7 +7259,7 @@ function nor_parse_id_list($raw): array {
     $s = is_string($raw) ? trim($raw) : '';
     $ids = ($s === '') ? [] : array_map('intval', array_map('trim', explode(',', $s)));
   }
-  $ids = array_values(array_filter($ids, fn($n) => is_int($n) ? $n > 0 : (int)$n > 0));
+  $ids = array_values(array_filter($ids, fn($n) => $n > 0));
   // unique keep order
   $seen = [];
   $out = [];
@@ -6265,8 +7684,6 @@ add_action('add_meta_boxes_works', function () {
       // Shared nonce for all Works meta boxes
       wp_nonce_field('nor_work_meta_save', 'nor_work_meta_nonce');
 
-      // $gallery_style = ($content_mode === 'full') ? '' : 'display:none;'; // (DELETE this line)
-
       // New block for gallery wrapper
       $is_full = ($content_mode === 'full');
       $disabled_attr  = $is_full ? '' : ' disabled';
@@ -6355,7 +7772,14 @@ add_action('add_meta_boxes_works', function () {
           $checked = in_array($tid, $end_ids, true);
           $disabled = ($main > 0 && $tid === $main);
           echo '<label style="display:flex;gap:8px;align-items:flex-start;">';
-          echo '<input type="checkbox" name="nor_end_client_ids[]" value="' . esc_attr($tid) . '" ' . checked(true, $checked, false) . ($disabled ? ' disabled' : '') . ' />';
+          // Optical nudge only: align-items:flex-start (above) is what keeps
+          // the checkbox pinned to the first line for long, wrapping client
+          // names -- switching to center would re-center it across the
+          // whole wrapped block instead. The checkbox's own default box
+          // otherwise renders a couple px above the label text's cap-height
+          // at this admin font-size, so nudge it down to match instead of
+          // touching alignment at the label level.
+          echo '<input type="checkbox" style="margin-top:1px;" name="nor_end_client_ids[]" value="' . esc_attr($tid) . '" ' . checked(true, $checked, false) . ($disabled ? ' disabled' : '') . ' />';
           echo '<span>' . esc_html($t->name) . ($disabled ? '（メイン）' : '') . '</span>';
           echo '</label>';
         }
@@ -6573,6 +7997,28 @@ add_filter('wp_insert_post_data', function ($data, $postarr) {
   return $data;
 }, 10, 2);
 
+/**
+ * Render a one-shot admin warning notice from a (possibly multi-line)
+ * message string: a single line becomes a <p>, multiple lines become a
+ * bulleted <ul>. Does not touch transients/post/user/screen — callers own
+ * fetching the message and deleting its transient; this only renders.
+ */
+function nor_render_admin_warning_notice(string $msg): void {
+  $lines = preg_split("/\r\n|\r|\n/", $msg);
+  $lines = array_filter(array_map('trim', (array) $lines));
+
+  echo '<div class="notice notice-warning is-dismissible">';
+  if (count($lines) <= 1) {
+    echo '<p>' . esc_html($msg) . '</p>';
+  } else {
+    echo '<ul style="margin:0.5em 0 0.5em 1.2em; list-style:disc;">';
+    foreach ($lines as $l) {
+      echo '<li>' . esc_html($l) . '</li>';
+    }
+    echo '</ul>';
+  }
+  echo '</div>';
+}
 
 add_action('admin_notices', function () {
   $screen = function_exists('get_current_screen') ? get_current_screen() : null;
@@ -6590,20 +8036,7 @@ add_action('admin_notices', function () {
     $msg = get_transient($user_key);
     if (!is_string($msg) || trim($msg) === '') return;
 
-    $lines = preg_split("/\r\n|\r|\n/", (string) $msg);
-    $lines = array_filter(array_map('trim', (array) $lines));
-
-    echo '<div class="notice notice-warning is-dismissible">';
-    if (count($lines) <= 1) {
-      echo '<p>' . esc_html($msg) . '</p>';
-    } else {
-      echo '<ul style="margin:0.5em 0 0.5em 1.2em; list-style:disc;">';
-      foreach ($lines as $l) {
-        echo '<li>' . esc_html($l) . '</li>';
-      }
-      echo '</ul>';
-    }
-    echo '</div>';
+    nor_render_admin_warning_notice($msg);
     // One-shot notice
     delete_transient($user_key);
     return;
@@ -6612,20 +8045,7 @@ add_action('admin_notices', function () {
   $msg = get_transient('nor_work_admin_notice_' . $post_id);
   if (!is_string($msg) || trim($msg) === '') return;
 
-  $lines = preg_split("/\r\n|\r|\n/", (string) $msg);
-  $lines = array_filter(array_map('trim', (array) $lines));
-
-  echo '<div class="notice notice-warning is-dismissible">';
-  if (count($lines) <= 1) {
-    echo '<p>' . esc_html($msg) . '</p>';
-  } else {
-    echo '<ul style="margin:0.5em 0 0.5em 1.2em; list-style:disc;">';
-    foreach ($lines as $l) {
-      echo '<li>' . esc_html($l) . '</li>';
-    }
-    echo '</ul>';
-  }
-  echo '</div>';
+  nor_render_admin_warning_notice($msg);
   // One-shot notices (prevents stale/accumulating messages across saves)
   delete_transient('nor_work_admin_notice_' . $post_id);
 });
@@ -7141,39 +8561,12 @@ if (!function_exists('nor_policies_allowed_html')) {
 }
 
 if (!function_exists('nor_policies_sanitize_rich_text')) {
-  function nor_policies_rewrite_asset_links(string $html): string {
-    $html = (string) $html;
-    if ($html === '' || strpos($html, 'href="/"') === false) return $html;
-
-    $asset_map = [
-      'nor.tokens.css' => '/assets/css/nor.tokens.css',
-      'nor.base.css'   => '/assets/css/nor.base.css',
-      'nor.ui.css'     => '/assets/css/nor.ui.css',
-      'nor.js'         => '/assets/js/nor.js',
-    ];
-
-    return (string) preg_replace_callback(
-      '/<a(?P<pre>[^>]*?)\shref=(?P<q>[\'"])\/(?P=q)(?P<post>[^>]*)>\s*<code>\s*(?P<file>nor\.(?:tokens|base|ui)\.css|nor\.js)\s*<\/code>\s*<\/a>/i',
-      static function (array $m) use ($asset_map): string {
-        $file = isset($m['file']) ? strtolower((string) $m['file']) : '';
-        $path = $asset_map[$file] ?? '/';
-        $pre = isset($m['pre']) ? (string) $m['pre'] : '';
-        $post = isset($m['post']) ? (string) $m['post'] : '';
-        $q = isset($m['q']) ? (string) $m['q'] : '"';
-
-        return '<a' . $pre . ' href=' . $q . $path . $q . $post . '><code>' . $file . '</code></a>';
-      },
-      $html
-    );
-  }
-
   function nor_policies_sanitize_rich_text(string $raw): string {
     $raw = trim($raw);
     if ($raw === '') return '';
     $raw = wp_check_invalid_utf8($raw, true);
     $safe = trim(wp_kses($raw, nor_policies_allowed_html()));
-    if ($safe === '') return '';
-    return trim(nor_policies_rewrite_asset_links($safe));
+    return $safe;
   }
 }
 
@@ -8015,7 +9408,6 @@ add_action('save_post_page', function ($post_id) {
   }
 
   update_post_meta($post_id, 'nor_policies_groups', $groups);
-  delete_post_meta($post_id, '_nor_policies_debug_last');
 });
 
 /**
@@ -8037,26 +9429,7 @@ if (!function_exists('nor_notes_default_majors')) {
 
 if (!function_exists('nor_notes_allowed_html')) {
   function nor_notes_allowed_html(): array {
-    if (function_exists('nor_policies_allowed_html')) {
-      return nor_policies_allowed_html();
-    }
-
-    $allowed = wp_kses_allowed_html('post');
-    $allowed['a']['target'] = true;
-    $allowed['a']['rel'] = true;
-    $allowed['a']['class'] = true;
-    $allowed['abbr']['title'] = true;
-    $allowed['code']['class'] = true;
-    $allowed['br']['class'] = true;
-    $allowed['span']['class'] = true;
-    $allowed['span']['lang'] = true;
-    $allowed['div']['class'] = true;
-    $allowed['div']['lang'] = true;
-    $allowed['li']['class'] = true;
-    if (!isset($allowed['time']) || !is_array($allowed['time'])) $allowed['time'] = [];
-    $allowed['time']['datetime'] = true;
-    $allowed['time']['class'] = true;
-    return $allowed;
+    return nor_policies_allowed_html();
   }
 }
 
@@ -8117,12 +9490,7 @@ if (!function_exists('nor_notes_decode_rich_storage')) {
 
 if (!function_exists('nor_notes_normalize_anchor_id')) {
   function nor_notes_normalize_anchor_id(string $raw, string $fallback = ''): string {
-    $raw = trim($raw);
-    $raw = ltrim($raw, '#');
-    if ($raw === '' && $fallback !== '') $raw = ltrim(trim($fallback), '#');
-    $id = sanitize_title($raw);
-    if ($id === '' && $fallback !== '') $id = sanitize_title(ltrim(trim($fallback), '#'));
-    return $id;
+    return nor_policies_normalize_anchor_id($raw, $fallback);
   }
 }
 
@@ -8960,7 +10328,9 @@ if (!function_exists('nor_faqs_default_sections')) {
     $categories_url = esc_url(home_url('/categories/'));
     $tags_url = esc_url(home_url('/tags/'));
     $archives_url = esc_url(home_url('/archives/'));
-    $clients_url = esc_url(home_url('/clients/'));
+    // /clients/ itself is not published content (it 301s to /clients/index-by-initial/);
+    // link FAQ copy directly at the real Client Index instead.
+    $clients_url = esc_url(home_url('/clients/index-by-initial/'));
     $policies_url = esc_url(home_url('/policies/'));
     $policies_takedown_url = esc_url(home_url('/policies/#policies-heading-takedown'));
     $policies_licensing_url = esc_url(home_url('/policies/#policies-heading-licensing-reuse'));
@@ -9798,16 +11168,18 @@ if (!function_exists('nor_contact_get_notification_recipients')) {
     $primary = nor_contact_primary_notify_email();
     if ($primary !== '') $recipients[] = $primary;
 
+    // nor_contact_sanitize_multiline_emails() is the single source of
+    // validation here: its return value is guaranteed already-valid,
+    // lowercased, de-duplicated (within extras), "\n"-joined emails, so it
+    // is safe to just split on "\n" below rather than re-running
+    // sanitize_email()/is_email() on values it already vetted. Kept at
+    // read time (not just at save time) as a defensive re-normalization in
+    // case the option ever holds something that didn't go through it.
     $extra_raw = (string) get_option('nor_contact_notify_extra_emails', '');
     $extra = nor_contact_sanitize_multiline_emails($extra_raw);
     if ($extra !== '') {
-      $parts = preg_split('/[\s,;]+/u', $extra, -1, PREG_SPLIT_NO_EMPTY);
-      if (is_array($parts)) {
-        foreach ($parts as $part) {
-          $email = sanitize_email((string) $part);
-          if ($email === '' || !is_email($email)) continue;
-          $recipients[] = strtolower($email);
-        }
+      foreach (explode("\n", $extra) as $email) {
+        $recipients[] = $email;
       }
     }
 
@@ -10727,6 +12099,50 @@ add_action('pre_get_posts', function ($query): void {
   $meta_query = $query->get('meta_query');
   if (!is_array($meta_query)) $meta_query = [];
 
+  $filter_meta_query = nor_contact_build_status_purpose_meta_query($status, $purpose);
+  foreach ($filter_meta_query as $clause) {
+    $meta_query[] = $clause;
+  }
+
+  if (!empty($meta_query)) {
+    $query->set('meta_query', $meta_query);
+  }
+}, 20, 1);
+
+/**
+ * Neutralize a CSV cell value that spreadsheet software (Excel, Google
+ * Sheets, LibreOffice) would interpret as a formula rather than text
+ * (CSV/Formula Injection, CWE-1236), by prefixing it with a single quote
+ * when its first character is a formula trigger. Output-time only — this
+ * never touches how the value is stored (post meta stays exactly as
+ * submitted); it's applied just before fputcsv() writes the row.
+ */
+function nor_csv_safe_cell(string $value): string {
+  if ($value === '') return $value;
+
+  static $triggers = [
+    '=', '+', '-', '@', "\t", "\r", "\n",
+    // Fullwidth equivalents (＝＋－＠) — a common way to eyeball past a
+    // naive ASCII-only check when the CSV is opened in a JA-locale Excel.
+    '＝', '＋', '－', '＠',
+  ];
+
+  $first = mb_substr($value, 0, 1, 'UTF-8');
+  if (in_array($first, $triggers, true)) {
+    return "'" . $value;
+  }
+  return $value;
+}
+
+/**
+ * Build the meta_query clauses for the Contact admin list's status/purpose
+ * filters -- and only that: no $_GET reading, no WP_Query/args wiring, no
+ * post_type/post_status, no compare/type/relation. Callers own how the
+ * result gets applied to their own query.
+ */
+function nor_contact_build_status_purpose_meta_query(string $status, string $purpose): array {
+  $meta_query = [];
+
   $status_options = nor_contact_status_options();
   if ($status !== '' && isset($status_options[$status])) {
     $meta_query[] = [
@@ -10743,10 +12159,8 @@ add_action('pre_get_posts', function ($query): void {
     ];
   }
 
-  if (!empty($meta_query)) {
-    $query->set('meta_query', $meta_query);
-  }
-}, 20, 1);
+  return $meta_query;
+}
 
 add_action('load-edit.php', function (): void {
   if (!is_admin()) return;
@@ -10775,22 +12189,7 @@ add_action('load-edit.php', function (): void {
     'ignore_sticky_posts' => true,
   ];
 
-  $meta_query = [];
-  $status_options = nor_contact_status_options();
-  if ($status !== '' && isset($status_options[$status])) {
-    $meta_query[] = [
-      'key'   => 'nor_contact_status',
-      'value' => $status,
-    ];
-  }
-
-  $purpose_options = nor_contact_purpose_options();
-  if ($purpose !== '' && isset($purpose_options[$purpose])) {
-    $meta_query[] = [
-      'key'   => 'nor_contact_purpose',
-      'value' => $purpose,
-    ];
-  }
+  $meta_query = nor_contact_build_status_purpose_meta_query($status, $purpose);
 
   if (!empty($meta_query)) {
     $args['meta_query'] = $meta_query;
@@ -10851,11 +12250,11 @@ add_action('load-edit.php', function (): void {
       $submitted_at,
       $status_label,
       $purpose_label,
-      $name,
-      $organization,
-      $email,
-      $urls,
-      $details,
+      nor_csv_safe_cell($name),
+      nor_csv_safe_cell($organization),
+      nor_csv_safe_cell($email),
+      nor_csv_safe_cell($urls),
+      nor_csv_safe_cell($details),
     ]);
   }
 
@@ -11520,20 +12919,7 @@ add_action('admin_notices', function () {
     $msg = get_transient($user_key);
     if (!is_string($msg) || trim($msg) === '') return;
 
-    $lines = preg_split("/\r\n|\r|\n/", (string) $msg);
-    $lines = array_filter(array_map('trim', (array) $lines));
-
-    echo '<div class="notice notice-warning is-dismissible">';
-    if (count($lines) <= 1) {
-      echo '<p>' . esc_html($msg) . '</p>';
-    } else {
-      echo '<ul style="margin:0.5em 0 0.5em 1.2em; list-style:disc;">';
-      foreach ($lines as $l) {
-        echo '<li>' . esc_html($l) . '</li>';
-      }
-      echo '</ul>';
-    }
-    echo '</div>';
+    nor_render_admin_warning_notice($msg);
     // One-shot notice
     delete_transient($user_key);
     return;
@@ -11542,20 +12928,7 @@ add_action('admin_notices', function () {
   $msg = get_transient('nor_writing_admin_notice_' . $post_id);
   if (!is_string($msg) || trim($msg) === '') return;
 
-  $lines = preg_split("/\r\n|\r|\n/", (string) $msg);
-  $lines = array_filter(array_map('trim', (array) $lines));
-
-  echo '<div class="notice notice-warning is-dismissible">';
-  if (count($lines) <= 1) {
-    echo '<p>' . esc_html($msg) . '</p>';
-  } else {
-    echo '<ul style="margin:0.5em 0 0.5em 1.2em; list-style:disc;">';
-    foreach ($lines as $l) {
-      echo '<li>' . esc_html($l) . '</li>';
-    }
-    echo '</ul>';
-  }
-  echo '</div>';
+  nor_render_admin_warning_notice($msg);
   // One-shot notices (prevents stale/accumulating messages across saves)
   delete_transient('nor_writing_admin_notice_' . $post_id);
 });

@@ -15,6 +15,13 @@
   $site_url = trailingslashit(home_url('/'));
   $theme_uri = get_stylesheet_directory_uri();
   $ga_measurement_id = trim((string) get_option('nor_ga_measurement_id', 'G-NSEHNNMJDH'));
+  // Only send real production data: site must be search-engine-public (the
+  // same blog_public flag this theme's SEO logic already treats as the
+  // pre-release/production switch) and the viewer must not be logged in
+  // (excludes admin/editor front-end previews from GA4).
+  $ga_enabled = $ga_measurement_id !== ''
+    && (int) get_option('blog_public', 0) === 1
+    && !is_user_logged_in();
   $social_google_url = trim((string) get_option('nor_social_google_url', ''));
   $social_x_url = trim((string) get_option('nor_social_x_url', ''));
   $social_facebook_url = trim((string) get_option('nor_social_facebook_url', ''));
@@ -77,12 +84,34 @@
     } elseif (function_exists('is_tax') && is_tax()) {
       $term = get_queried_object();
       if ($term instanceof WP_Term) {
-        $turl = get_term_link($term);
-        if (!is_wp_error($turl) && is_string($turl) && $turl !== '') $page_url = $turl;
+        // Page 1 (default): term's own canonical URL (masking-aware via
+        // get_term_link()'s `term_link` filter). Page 2+: self-canonicalize
+        // to the actual paginated URL — get_pagenum_link() derives this from
+        // the current request path, so masked work_client slugs and any
+        // UI-only query args (e.g. ?from=index-by-initial) are naturally reflected as
+        // requested; the latter are stripped later by
+        // nor_seo_meta_normalize_url() below, same as every other branch.
+        $tax_paged = max(1, (int) get_query_var('paged'));
+        if ($tax_paged > 1) {
+          $tax_paged_url = get_pagenum_link($tax_paged);
+          if (is_string($tax_paged_url) && $tax_paged_url !== '') $page_url = $tax_paged_url;
+        } else {
+          $turl = get_term_link($term);
+          if (!is_wp_error($turl) && is_string($turl) && $turl !== '') $page_url = $turl;
+        }
       }
     } elseif (function_exists('is_post_type_archive') && is_post_type_archive('works')) {
       if ($works_archive_year !== '') {
-        $page_url = home_url('/archives/' . rawurlencode($works_archive_year) . '/');
+        // Page 1 (default): fixed /archives/{year}/ URL. Page 2+:
+        // self-canonicalize via get_pagenum_link(), same rationale as the
+        // is_tax() branch above.
+        $year_paged = max(1, (int) get_query_var('paged'));
+        if ($year_paged > 1) {
+          $year_paged_url = get_pagenum_link($year_paged);
+          if (is_string($year_paged_url) && $year_paged_url !== '') $page_url = $year_paged_url;
+        } else {
+          $page_url = home_url('/archives/' . rawurlencode($works_archive_year) . '/');
+        }
       } else {
         $paged = max(1, (int) get_query_var('paged'));
         $page_url = ($paged > 1) ? get_pagenum_link($paged) : home_url('/works/');
@@ -102,6 +131,7 @@
   $seo_desc_en_override = '';
   $seo_canonical_override = '';
   $seo_og_image_override = '';
+  $seo_og_image_mask_override = '';
   $seo_og_title_override = '';
   $seo_robots_override = '';
   $singular_id = 0;
@@ -114,8 +144,126 @@
       $seo_desc_en_override = trim((string) get_post_meta($singular_id, 'nor_meta_desc_en_override', true));
       $seo_canonical_override = trim((string) get_post_meta($singular_id, 'nor_canonical_override', true));
       $seo_og_image_override = trim((string) get_post_meta($singular_id, 'nor_og_image_override', true));
+      $seo_og_image_mask_override = trim((string) get_post_meta($singular_id, 'nor_og_image_mask_override', true));
       $seo_og_title_override = trim((string) get_post_meta($singular_id, 'nor_og_title_override', true));
       $seo_robots_override = trim((string) get_post_meta($singular_id, 'nor_robots_override', true));
+
+      // Client-name masking for Works: these overrides are raw admin-entered
+      // snapshots (captured via the SEO/LLMO meta box's "reflect from body"
+      // button, which never applies masking itself), so a masked client's
+      // real name can still be sitting in them even when the live
+      // H1/tagline/summary are correctly masked. Mask them here at output
+      // time instead — a no-op for Writings/Pages, since
+      // nor_mask_work_client_names_in_text() only acts on post_type=works.
+      // Title/OG title can combine a Japanese-context occurrence of a
+      // client's name with an English-context one (same alias, two
+      // different targets), so a single whole-string pass can't tell them
+      // apart — use nor_mask_work_client_seo_title_text(), which looks up
+      // the Work's actual title/nor_tagline text verbatim and swaps in their
+      // already-correct masked counterparts, without parsing the override's
+      // "{name} - {tagline} | ..." shape at all. Description JA/EN are
+      // already separate fields (see the " | " join below), so they use the
+      // plain 'default'/'en' variants, same as nor_summary_ja/nor_summary_en.
+      if (is_singular('works') && function_exists('nor_mask_work_client_seo_title_text')) {
+        if ($seo_title_override !== '') {
+          $seo_title_override = nor_mask_work_client_seo_title_text($seo_title_override, $singular_id);
+        }
+        if ($seo_desc_ja_override !== '' && function_exists('nor_mask_work_client_names_in_text')) {
+          $seo_desc_ja_override = nor_mask_work_client_names_in_text($seo_desc_ja_override, $singular_id);
+        }
+        if ($seo_desc_en_override !== '' && function_exists('nor_mask_work_client_names_in_text')) {
+          $seo_desc_en_override = nor_mask_work_client_names_in_text($seo_desc_en_override, $singular_id, 'en');
+        }
+        if ($seo_og_title_override !== '') {
+          $seo_og_title_override = nor_mask_work_client_seo_title_text($seo_og_title_override, $singular_id);
+        }
+      }
+    }
+  }
+
+  // Category detail (is_tax('work_category')): use the term's own JA
+  // description (WordPress's built-in term description field, fetched via
+  // get_term_field(..., 'raw') rather than $term->description directly —
+  // the latter can come back through display-time filtering, which strips
+  // markup like <abbr> — same reasoning as taxonomy-works-list.php's own
+  // $desc_ja) and EN description (nor_desc_en term meta) instead of the
+  // parent "Categories" list page's description inherited below. Populating
+  // these here first means the generic inherit block's `=== ''` guards
+  // below naturally skip desc_ja/desc_en for Category detail pages;
+  // og_image/robots inheritance (shared og-categories.webp, etc.) is
+  // intentionally left untouched, and Tags/Clients/Works-archive are
+  // unaffected since this only runs for work_category.
+  if (function_exists('is_tax') && is_tax('work_category')) {
+    $seo_category_term = get_queried_object();
+    if ($seo_category_term instanceof WP_Term) {
+      $seo_category_term_id = (int) $seo_category_term->term_id;
+      if ($seo_category_term_id > 0) {
+        $seo_category_desc_ja_raw = get_term_field('description', $seo_category_term_id, 'work_category', 'raw');
+        $seo_category_desc_ja = is_wp_error($seo_category_desc_ja_raw) ? '' : trim((string) $seo_category_desc_ja_raw);
+        $seo_category_desc_en = function_exists('nor_get_term_desc_en') ? trim((string) nor_get_term_desc_en($seo_category_term_id)) : '';
+
+        if ($seo_desc_ja_override === '' && $seo_category_desc_ja !== '') $seo_desc_ja_override = $seo_category_desc_ja;
+        if ($seo_desc_en_override === '' && $seo_category_desc_en !== '') $seo_desc_en_override = $seo_category_desc_en;
+      }
+    }
+  }
+
+  // Tag detail (is_tax('work_tag')): same reasoning as the Category detail
+  // block above — use the term's own JA description (term standard
+  // description field, raw) and EN description (nor_desc_en term meta)
+  // instead of the parent "Tags" list page's description inherited below.
+  // og_image/robots inheritance (shared og-tags.webp, etc.) is intentionally
+  // left untouched, and Categories/Clients/Works-archive are unaffected
+  // since this only runs for work_tag.
+  if (function_exists('is_tax') && is_tax('work_tag')) {
+    $seo_tag_term = get_queried_object();
+    if ($seo_tag_term instanceof WP_Term) {
+      $seo_tag_term_id = (int) $seo_tag_term->term_id;
+      if ($seo_tag_term_id > 0) {
+        $seo_tag_desc_ja_raw = get_term_field('description', $seo_tag_term_id, 'work_tag', 'raw');
+        $seo_tag_desc_ja = is_wp_error($seo_tag_desc_ja_raw) ? '' : trim((string) $seo_tag_desc_ja_raw);
+        $seo_tag_desc_en = function_exists('nor_get_term_desc_en') ? trim((string) nor_get_term_desc_en($seo_tag_term_id)) : '';
+
+        if ($seo_desc_ja_override === '' && $seo_tag_desc_ja !== '') $seo_desc_ja_override = $seo_tag_desc_ja;
+        if ($seo_desc_en_override === '' && $seo_tag_desc_en !== '') $seo_desc_en_override = $seo_tag_desc_en;
+      }
+    }
+  }
+
+  // Client detail (is_tax('work_client')): use the term's own JA description
+  // (WordPress's built-in term description field, fetched via
+  // get_term_field(..., 'raw') -- same reasoning as the Category/Tag blocks
+  // above) and EN description (nor_desc_en term meta) instead of the parent
+  // "Clients" list page's description inherited below. Unlike Category/Tag,
+  // a work_client term can be masked (nor_mask_enabled term meta): both
+  // descriptions are passed through nor_mask_work_client_term_text() -- the
+  // same masking helper taxonomy-works-list.php's own Hero already uses for
+  // this exact term -- so any real-name mention inside the free-text
+  // description is replaced with the public/masked name before it reaches
+  // head output. For a non-masked term this is a no-op (returns the text
+  // unchanged). Populating these here first means the generic inherit
+  // block's `=== ''` guards below naturally skip desc_ja/desc_en for Client
+  // detail pages; og_image/robots inheritance (shared og-clients.webp, etc.)
+  // is intentionally left untouched, and Categories/Tags/Works-archive are
+  // unaffected since this only runs for work_client (not work_industry,
+  // which has no header.php-specific handling at all).
+  if (function_exists('is_tax') && is_tax('work_client')) {
+    $seo_client_term = get_queried_object();
+    if ($seo_client_term instanceof WP_Term) {
+      $seo_client_term_id = (int) $seo_client_term->term_id;
+      if ($seo_client_term_id > 0) {
+        $seo_client_desc_ja_raw = get_term_field('description', $seo_client_term_id, 'work_client', 'raw');
+        $seo_client_desc_ja = is_wp_error($seo_client_desc_ja_raw) ? '' : trim((string) $seo_client_desc_ja_raw);
+        $seo_client_desc_en = function_exists('nor_get_term_desc_en') ? trim((string) nor_get_term_desc_en($seo_client_term_id)) : '';
+
+        if (function_exists('nor_mask_work_client_term_text')) {
+          $seo_client_desc_ja = trim((string) nor_mask_work_client_term_text($seo_client_term, $seo_client_desc_ja));
+          $seo_client_desc_en = trim((string) nor_mask_work_client_term_text($seo_client_term, $seo_client_desc_en, 'en'));
+        }
+
+        if ($seo_desc_ja_override === '' && $seo_client_desc_ja !== '') $seo_desc_ja_override = $seo_client_desc_ja;
+        if ($seo_desc_en_override === '' && $seo_client_desc_en !== '') $seo_desc_en_override = $seo_client_desc_en;
+      }
     }
   }
 
@@ -199,12 +347,12 @@
   if ($is_home && $home_meta_desc_ja_override !== '') $desc_ja = $home_meta_desc_ja_override;
   if ($is_home && $home_meta_desc_en_override !== '') $desc_en = $home_meta_desc_en_override;
 
-  // Meta descriptions should be single-line for stable head output.
+  // Meta descriptions should be single-line for stable head output, CJK-
+  // aware. These override values are plain-text meta fields (not HTML
+  // markup), so strip_tags is on. See nor_normalize_single_line_text() in
+  // functions.php for the full rationale.
   $normalize_meta_line = static function (string $text): string {
-    $text = trim($text);
-    if ($text === '') return '';
-    $text = (string) preg_replace('/\s+/u', ' ', $text);
-    return trim($text);
+    return nor_normalize_single_line_text($text, true);
   };
   $desc_ja = $normalize_meta_line((string) $desc_ja);
   $desc_en = $normalize_meta_line((string) $desc_en);
@@ -213,6 +361,18 @@
     return is_string($v) && $v !== '';
   }));
   $desc = !empty($desc_parts) ? implode(' | ', $desc_parts) : '';
+
+  // Site-wide description for the WebSite entity only (Schema.org). Unlike
+  // $desc_ja/$desc_en/$desc above (meta description, OG, Twitter, and
+  // WebPage.description — all page-specific), this must stay fixed across
+  // every page, so it intentionally reuses only the sitewide default
+  // settings and never the per-entry/Home override chain.
+  $site_desc_ja = $normalize_meta_line((string) $default_meta_desc_ja_override);
+  $site_desc_en = $normalize_meta_line((string) $default_meta_desc_en_override);
+  $site_desc_parts = array_values(array_filter([$site_desc_ja, $site_desc_en], static function ($v) {
+    return is_string($v) && $v !== '';
+  }));
+  $site_desc = !empty($site_desc_parts) ? implode(' | ', $site_desc_parts) : '';
 
   // Title (default formula + optional override)
   $site_name_for_title = 'nør. Ryousuke Tamura Design Office';
@@ -250,10 +410,16 @@
   if ($seo_title_override !== '') {
     $title = $seo_title_override;
   }
-  // Year archives: keep title and social title consistent with Archives-specific SEO setting.
-  // If no explicit title override exists, adopt OG title override (inherited from fixed page "archives").
-  if (!$is_home && $works_archive_year !== '' && $seo_title_override === '' && $seo_og_title_override !== '') {
-    $title = $seo_og_title_override;
+  // Year archives: build a year-specific title ("Archives {year} | site name")
+  // instead of reusing the parent "archives" page's shared og_title override
+  // verbatim -- that override is one fixed string, so every year previously
+  // showed the identical parent title. $works_archive_year always comes from
+  // the actual query var ($resolve_works_archive_year() above), so this
+  // scales to any future year with no per-year hardcoding. $social_title
+  // (og/twitter) and JSON-LD CollectionPage.name below both derive from
+  // $title, so this single change covers all four consistently.
+  if (!$is_home && $works_archive_year !== '' && $seo_title_override === '') {
+    $title = 'Archives ' . $works_archive_year . ' | ' . $site_name_for_title;
   }
   if ($is_home && $home_meta_title_override !== '') {
     $title = $home_meta_title_override;
@@ -288,10 +454,58 @@
     }
   }
 
+  // Document <title> only — OGP/Twitter ($social_title, below) and JSON-LD
+  // (WebPage.name) intentionally keep using $title unchanged. For paginated
+  // listings whose page-1 title has no page-number concept yet (taxonomy
+  // archives, the Works archive, and the Writings list page), this adds an
+  // explicit "Page N" segment instead of relying on WordPress core's
+  // locale-translated "ページ N" text (which $title_wp carries as-is for
+  // is_tax()/is_post_type_archive() once $paged >= 2). The Works year
+  // archive already has its own dedicated title handling and is excluded.
+  $document_title = $title;
+  $doc_title_paged = max(1, (int) get_query_var('paged'));
+  if ($doc_title_paged >= 2) {
+    $doc_title_eligible = false;
+    $doc_title_head = '';
+
+    if (function_exists('is_tax') && is_tax()) {
+      $doc_title_eligible = true;
+      $doc_title_term = get_queried_object();
+      if ($doc_title_term instanceof WP_Term) {
+        $doc_title_head = function_exists('nor_get_term_public_name')
+          ? nor_get_term_public_name($doc_title_term, (string) $doc_title_term->name)
+          : (string) $doc_title_term->name;
+      }
+    } elseif (function_exists('is_post_type_archive') && is_post_type_archive('works') && $works_archive_year === '') {
+      $doc_title_eligible = true;
+      $doc_title_head = 'Works';
+    } elseif (function_exists('is_page') && is_page('writings') && $singular_id > 0) {
+      $doc_title_eligible = true;
+      $doc_title_head = trim((string) wp_strip_all_tags((string) get_the_title($singular_id)));
+    }
+
+    $doc_title_head = trim((string) $doc_title_head);
+    if ($doc_title_eligible && $doc_title_head !== '') {
+      $document_title = $doc_title_head . ' | Page ' . $doc_title_paged . ' | ' . $site_name_for_title;
+    }
+  }
+
   $social_title = $title;
   // Year archives: force consistency between <title> and og/twitter titles.
   if (!(!$is_home && $works_archive_year !== '')) {
-    if ($seo_og_title_override !== '') $social_title = $seo_og_title_override;
+    // Category/Tag detail: $seo_og_title_override here is always the parent
+    // "Categories"/"Tags" list page's inherited value (never term-specific —
+    // see the Category/Tag detail blocks above, neither of which sets
+    // og_title), so applying it would overwrite the already-correct,
+    // term-specific $title. Skip it and keep $social_title as $title instead.
+    $is_category_detail = (function_exists('is_tax') && is_tax('work_category'));
+    $is_tag_detail = (function_exists('is_tax') && is_tax('work_tag'));
+    // Client detail: same reasoning -- $title here is already the
+    // masking-safe public Client name (see the pre_get_document_title
+    // filter in functions.php), so it must not be overwritten by the
+    // parent "Clients" list page's inherited (never term-specific) value.
+    $is_client_detail = (function_exists('is_tax') && is_tax('work_client'));
+    if (!$is_category_detail && !$is_tag_detail && !$is_client_detail && $seo_og_title_override !== '') $social_title = $seo_og_title_override;
     if ($is_home && $home_og_title_override !== '') $social_title = $home_og_title_override;
   }
   $social_title_segments = preg_split('/\s*\|\s*/u', (string) $social_title, -1, PREG_SPLIT_NO_EMPTY);
@@ -323,13 +537,12 @@
 
   $robots_default = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
   $robots = $robots_default;
-  $allowed_robots = [
-    $robots_default,
-    'index, follow',
-    'noindex, follow',
-    'noindex, nofollow',
-    'index, nofollow',
-  ];
+  // Same source as the admin choices (nor_get_robots_override_choices()),
+  // minus the '' entry: that key exists there only to give the admin
+  // <select>'s "default" option a submittable value, and has no meaning as
+  // a front-end override here (an empty $seo_robots_override already never
+  // reaches the in_array() check below, via the `!== ''` guard).
+  $allowed_robots = array_values(array_diff(array_keys(nor_get_robots_override_choices()), ['']));
   $env_type = function_exists('nor_get_environment_type')
     ? (string) nor_get_environment_type()
     : ((function_exists('wp_get_environment_type') ? (string) wp_get_environment_type() : 'production'));
@@ -337,6 +550,11 @@
   $discourage_search = ((int) get_option('blog_public', 1) === 0);
   if ($force_noindex_by_env || $discourage_search) {
     $robots = 'noindex, nofollow';
+  } elseif (function_exists('is_page') && is_page('search')) {
+    // Internal search-results page: never index, but keep links followable.
+    // Takes priority over any per-page nor_robots_override (pre-release
+    // noindex/blog_public above still wins first).
+    $robots = 'noindex, follow';
   } elseif ($seo_robots_override !== '' && in_array($seo_robots_override, $allowed_robots, true)) {
     $robots = $seo_robots_override;
   }
@@ -347,6 +565,21 @@
   if ($default_og_image_override !== '') $og_image = $default_og_image_override;
   if ($seo_og_image_override !== '') $og_image = $seo_og_image_override;
   if ($is_home && $home_og_image_override !== '') $og_image = $home_og_image_override;
+
+  // Works with at least one masked client must never show the regular
+  // per-entry OG image ($seo_og_image_override): it can depict the real
+  // deliverable, company name, or logo. Use the dedicated masked-safe
+  // override instead, or fall back all the way to the sitewide default —
+  // deliberately skipping $seo_og_image_override entirely rather than
+  // falling through to it when the masked override isn't set.
+  if (
+    is_singular('works')
+    && function_exists('nor_work_has_masked_client')
+    && nor_work_has_masked_client($singular_id)
+  ) {
+    $og_image = ($seo_og_image_mask_override !== '') ? $seo_og_image_mask_override : $default_og_image_override;
+  }
+
   $og_image_secure = '';
   $og_image_type = '';
   $og_image_width = 0;
@@ -356,12 +589,30 @@
     $og_image_secure = set_url_scheme($og_image, 'https');
     $attachment_id = (int) attachment_url_to_postid($og_image);
     if ($attachment_id > 0) {
-      $mime = (string) get_post_mime_type($attachment_id);
-      if (str_starts_with($mime, 'image/')) {
-        $og_image_type = $mime;
+      $meta = wp_get_attachment_metadata($attachment_id);
+
+      // Prefer the actually-served file's own extension for MIME type.
+      // The theme's image_editor_output_format filter can convert uploads
+      // to WebP without updating the attachment's stored post_mime_type,
+      // so that DB value can go stale relative to the real file on disk.
+      $og_image_file_for_type = (is_array($meta) && !empty($meta['file']) && is_string($meta['file']))
+        ? $meta['file']
+        : (string) wp_parse_url($og_image, PHP_URL_PATH);
+      if ($og_image_file_for_type !== '') {
+        $filetype = wp_check_filetype($og_image_file_for_type);
+        if (!empty($filetype['type']) && is_string($filetype['type']) && str_starts_with($filetype['type'], 'image/')) {
+          $og_image_type = $filetype['type'];
+        }
+      }
+      // Fallback only: the attachment's recorded MIME type (may be stale
+      // relative to the current file after a format-converting filter).
+      if ($og_image_type === '') {
+        $mime = (string) get_post_mime_type($attachment_id);
+        if (str_starts_with($mime, 'image/')) {
+          $og_image_type = $mime;
+        }
       }
 
-      $meta = wp_get_attachment_metadata($attachment_id);
       if (is_array($meta)) {
         if (!empty($meta['width'])) $og_image_width = (int) $meta['width'];
         if (!empty($meta['height'])) $og_image_height = (int) $meta['height'];
@@ -452,13 +703,13 @@
       ],
     ],
   ];
-  if ($desc_ja !== '' && $desc_en !== '') {
+  if ($site_desc_ja !== '' && $site_desc_en !== '') {
     $schema_graph[0]['description'] = [
-      ['@value' => $desc_ja, '@language' => 'ja'],
-      ['@value' => $desc_en, '@language' => 'en'],
+      ['@value' => $site_desc_ja, '@language' => 'ja'],
+      ['@value' => $site_desc_en, '@language' => 'en'],
     ];
-  } elseif ($desc !== '') {
-    $schema_graph[0]['description'] = $desc;
+  } elseif ($site_desc !== '') {
+    $schema_graph[0]['description'] = $site_desc;
   }
 
   $primary_image_id = '';
@@ -485,16 +736,24 @@
   if ($primary_image_id !== '') {
     $page_node['primaryImageOfPage'] = ['@id' => $primary_image_id];
   }
+  // $desc_ja/$desc_en/$desc themselves stay untouched here (they also feed
+  // <meta name="description">/OGP/Twitter Card below, whose current output
+  // is correct as-is). JSON-LD is not an HTML context, so a saved value
+  // that already contains a literal "&amp;" (see nor_summary_en/
+  // nor_meta_desc_en_override -- WP encodes a typed "&" to "&amp;" on save)
+  // must be decoded back to "&" only at this point of use, same as
+  // WebPage.name/CreativeWork.name/BreadcrumbList.name above.
   if ($desc_ja !== '' && $desc_en !== '') {
     $page_node['description'] = [
-      ['@value' => $desc_ja, '@language' => 'ja'],
-      ['@value' => $desc_en, '@language' => 'en'],
+      ['@value' => html_entity_decode($desc_ja, ENT_QUOTES | ENT_HTML5, 'UTF-8'), '@language' => 'ja'],
+      ['@value' => html_entity_decode($desc_en, ENT_QUOTES | ENT_HTML5, 'UTF-8'), '@language' => 'en'],
     ];
   } elseif ($desc !== '') {
-    $page_node['description'] = $desc;
+    $page_node['description'] = html_entity_decode($desc, ENT_QUOTES | ENT_HTML5, 'UTF-8');
   }
   if (is_singular('works')) $page_node['mainEntity'] = ['@id' => $page_base . '#work'];
   if (is_singular('post')) $page_node['mainEntity'] = ['@id' => $page_base . '#article'];
+  if (function_exists('is_page') && is_page('about')) $page_node['mainEntity'] = ['@id' => $site_url . '#person'];
 
   // FAQPage: build mainEntity from stored FAQ markup when available.
   if ($schema_page_type === 'FAQPage' && function_exists('is_page') && is_page()) {
@@ -572,12 +831,24 @@
     if (function_exists('nor_get_work_public_title')) {
       $work_name = trim((string) wp_strip_all_tags((string) nor_get_work_public_title($work_id, $work_name)));
     }
+    // get_the_title() runs through the_title (wptexturize), which entity-
+    // encodes a literal "&" to "&#038;" for HTML display -- same reason
+    // $title_wp above needs the same decode. JSON-LD is not an HTML context,
+    // so decode back to the literal character here too.
+    $work_name = html_entity_decode($work_name, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     $summary_ja = trim((string) wp_strip_all_tags((string) get_post_field('post_excerpt', $work_id)));
     $summary_en = trim((string) wp_strip_all_tags((string) get_post_meta($work_id, 'nor_summary_en', true)));
     if (function_exists('nor_get_work_public_text')) {
       $summary_ja = trim((string) wp_strip_all_tags((string) nor_get_work_public_text($work_id, $summary_ja)));
       $summary_en = trim((string) wp_strip_all_tags((string) nor_get_work_public_text($work_id, $summary_en, 'en')));
     }
+    // $summary_ja/$summary_en are only used for CreativeWork.description
+    // below (no HTML meta/OGP/Twitter output shares them), so it's safe to
+    // decode in place here -- same reason as $work_name above: a saved
+    // value that already contains a literal "&amp;" (nor_summary_en encodes
+    // a typed "&" to "&amp;" on save) must read as "&" in JSON-LD.
+    $summary_ja = html_entity_decode($summary_ja, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $summary_en = html_entity_decode($summary_en, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     $desc_pair = [];
     if ($summary_ja !== '') $desc_pair[] = ['@value' => $summary_ja, '@language' => 'ja'];
     if ($summary_en !== '') $desc_pair[] = ['@value' => $summary_en, '@language' => 'en'];
@@ -585,7 +856,6 @@
     $creative = [
       '@type' => 'CreativeWork',
       '@id'   => $page_base . '#work',
-      'url'   => $page_url,
       'name'  => $work_name,
       'creator' => ['@id' => $site_url . '#organization'],
       'publisher' => ['@id' => $site_url . '#organization'],
@@ -593,7 +863,30 @@
       'isPartOf' => ['@id' => $site_url . '#website'],
       'mainEntityOfPage' => ['@id' => $page_base . '#webpage'],
     ];
-    if ($og_image !== '') $creative['image'] = $og_image;
+    // CreativeWork.image — read as "the work's own image" — is set only
+    // from an explicit, individually-set OG image ($seo_og_image_override,
+    // i.e. the SEO/LLMO "OG image" field's nor_og_image_override meta), never
+    // from $og_image's own fallback chain (site default / Home override) nor
+    // from an automatically-derived image (featured image / nor_gallery_ids).
+    // og:image/twitter:image/ImageObject/primaryImageOfPage are unaffected:
+    // they keep using $og_image directly, including its default-image
+    // fallback. Text-only Works have no image on public record (per the
+    // site's permission-gated image policy), so it's omitted regardless.
+    //
+    // For a Work with a masked client, $seo_og_image_override itself may be
+    // the real (unmasked) deliverable/company image, so it must not be used
+    // here either — swap in the same masked-safe override used for
+    // og:image/twitter:image ($seo_og_image_mask_override) instead. This
+    // keeps CreativeWork.image's own "explicit override only, no site-default
+    // fallback" rule intact: if that masked-safe override isn't set either,
+    // the property is simply omitted, same as today.
+    $work_content_mode = (string) get_post_meta($work_id, 'nor_content_mode', true);
+    $creative_image_source = (function_exists('nor_work_has_masked_client') && nor_work_has_masked_client($work_id))
+      ? $seo_og_image_mask_override
+      : $seo_og_image_override;
+    if ($work_content_mode !== 'text' && $creative_image_source !== '') {
+      $creative['image'] = $creative_image_source;
+    }
     if (!empty($desc_pair)) $creative['description'] = $desc_pair;
 
     $published_iso = (string) get_the_date('c', $work_id);
@@ -628,7 +921,15 @@
       'isPartOf' => ['@id' => $site_url . '#website'],
       'mainEntityOfPage' => ['@id' => $page_base . '#webpage'],
     ];
-    if ($og_image !== '') $article['image'] = $og_image;
+    // Article.image — read as "the writing's own image" — is set only from
+    // an explicit, individually-set OG image ($seo_og_image_override, i.e.
+    // the SEO/LLMO "OG image" field's nor_og_image_override meta), never
+    // from $og_image's own fallback chain (site default / Home override) nor
+    // from an automatically-derived image (featured image). og:image/
+    // twitter:image/ImageObject/primaryImageOfPage are unaffected: they keep
+    // using $og_image directly, including its default-image fallback. Same
+    // policy as Works' CreativeWork.image above.
+    if ($seo_og_image_override !== '') $article['image'] = $seo_og_image_override;
     if (!empty($writing_desc_pair)) $article['description'] = $writing_desc_pair;
 
     $writing_published_iso = (string) get_the_date('c', $writing_id);
@@ -757,9 +1058,8 @@
 <meta name="format-detection" content="telephone=no">
 <meta name="color-scheme" content="light dark">
 <meta name="robots" content="<?php echo esc_attr($robots); ?>">
-<meta name="generator" content="<?php echo esc_attr('WordPress ' . get_bloginfo('version')); ?>">
 
-<title><?php echo esc_html($title); ?></title>
+<title><?php echo esc_html($document_title); ?></title>
 <?php if ($desc) : ?>
 <meta name="description" content="<?php echo esc_attr($desc); ?>">
 <?php endif; ?>
@@ -819,17 +1119,11 @@
 <?php endif; ?>
 
 <link rel="canonical" href="<?php echo esc_url($page_url); ?>">
-<link rel="https://api.w.org/" href="<?php echo esc_url(rest_url()); ?>">
-<link rel="EditURI" type="application/rsd+xml" title="RSD" href="<?php echo esc_url(site_url('/xmlrpc.php?rsd')); ?>">
 
 <link rel="icon" type="image/svg+xml" href="<?php echo esc_url($theme_uri); ?>/assets/img/favicon.svg">
 <link rel="icon" sizes="any" href="<?php echo esc_url($theme_uri); ?>/assets/img/favicon.ico">
 <link rel="apple-touch-icon" href="<?php echo esc_url($theme_uri); ?>/assets/img/apple-touch-icon.png">
-<link rel="manifest" href="<?php echo esc_url($theme_uri); ?>/manifest.webmanifest">
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&family=Noto+Sans+JP:wght@300;400;700&family=Source+Code+Pro:wght@400&display=fallback" rel="stylesheet">
+<link rel="manifest" href="<?php echo esc_url($theme_uri); ?>/manifest.webmanifest" crossorigin="use-credentials">
 
 <style>
   html { background-color: #f8fafc; color: #020617; }
@@ -846,8 +1140,14 @@
   (function () {
     const KEY = "nor.themeMode.v1";
     const saved = (function () {
-      try { return localStorage.getItem(KEY); } catch (e) {}
-      try { return sessionStorage.getItem(KEY); } catch (e) {}
+      try {
+        const value = localStorage.getItem(KEY);
+        if (value !== null) return value;
+      } catch (e) {}
+      try {
+        const value = sessionStorage.getItem(KEY);
+        if (value !== null) return value;
+      } catch (e) {}
       return null;
     })();
     const mode = (String(saved || "auto").trim().toLowerCase());
@@ -871,7 +1171,7 @@
 </script>
 <?php endif; ?>
 
-<?php if ($ga_measurement_id !== '') : ?>
+<?php if ($ga_enabled) : ?>
 <script async src="https://www.googletagmanager.com/gtag/js?id=<?php echo rawurlencode($ga_measurement_id); ?>"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -944,8 +1244,8 @@
       <div class="inner">
         <p class="tagline">Graphic &amp; Web Design. <br>Not OR. Just right.</p>
         <div class="logo"><a href="<?php echo esc_url(home_url('/')); ?>">nør.</a></div>
-        <div class="cookie-agree" hidden>
-          <p><a href="<?php echo $policies_url; ?>" class="cookie-agree-link"><span class="cookie-agree-icon" aria-hidden="true">🍪</span>Cookies &amp; Privacy</a></p>
+        <div class="cookie-notice" hidden>
+          <p><a href="<?php echo $policies_url; ?>" class="cookie-notice-link" lang="en"><span class="cookie-notice-icon" aria-hidden="true">🍪</span>Cookies &amp; Privacy</a></p>
         </div>
       </div>
     </header>
@@ -968,16 +1268,16 @@
 ?>
     </nav>
 <?php if ($is_home) : ?>
-    <div class="cookie-agree" hidden>
+    <div class="cookie-notice" hidden>
       <div class="textpair" id="cookie-notice-text">
-        <p class="ja" lang="ja">このサイトでは、表示と操作に必要な Cookie だけを使用します。詳しくは「<a href="<?php echo $policies_url; ?>"><i>Policies</i></a>」を御覧ください。</p>
-        <p class="en" lang="en">This site uses only cookies necessary for basic functionality. See <a href="<?php echo $policies_url; ?>"><i>Policies</i></a> for details.</p>
+        <p class="ja" lang="ja">このサイトでは、表示設定をブラウザに保存し、アクセス解析に Cookie を使用する場合があります。詳しくは「<a href="<?php echo $policies_url; ?>"><i>Policies</i></a>」を御覧ください。</p>
+        <p class="en" lang="en">This site saves display preferences in your browser and may use cookies for analytics. See <a href="<?php echo $policies_url; ?>"><i>Policies</i></a> for details.</p>
       </div>
-      <button class="btn" type="button" aria-describedby="cookie-notice-text" data-cookie-accept>OK</button>
+      <button class="btn" type="button" aria-describedby="cookie-notice-text" data-cookie-acknowledge>OK</button>
     </div>
 <?php else : ?>
-    <div class="cookie-agree" hidden>
-      <p><a href="<?php echo $policies_url; ?>" class="cookie-agree-link"><span class="cookie-agree-icon" aria-hidden="true">🍪</span>Cookies &amp; Privacy</a></p>
+    <div class="cookie-notice" hidden>
+      <p><a href="<?php echo $policies_url; ?>" class="cookie-notice-link" lang="en"><span class="cookie-notice-icon" aria-hidden="true">🍪</span>Cookies &amp; Privacy</a></p>
     </div>
 <?php endif; ?>
   </div>

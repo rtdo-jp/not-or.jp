@@ -1,0 +1,470 @@
+@charset "UTF-8";
+
+/*
+  File: nor.article.css
+  Author: Ryousuke Tamura
+  Created: 2026-9-2
+  Note: Card Article split out of nor.works.css (Category A, Performance A/B
+  test). Card Article is shared by Works detail (single-works.php) AND
+  Writings detail (single-post.php), unlike Card Taxonomy/Archive/Client
+  which are Works-only — so it gets its own conditional stylesheet rather
+  than being bundled with nor.works.css or nor.ui.css.
+*/
+
+/*
+  Card Article
+======================================== */
+.card.article {
+  --card-py-top: var(--layout-section-gap-s);
+  --card-py-bottom: var(--layout-section-gap-s);
+}
+
+.card.article:has(figure) {
+  --card-py-top: calc(var(--layout-section-gap-s) + var(--optical-6));
+}
+
+/* Caption
+----------------- */
+.card.article :where(
+  .head figcaption,
+  .detail figcaption
+) :where(
+  .ja,
+  .en
+) {
+  display: block;
+  margin: 0;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.card.article :where(
+  .head figcaption,
+  .detail figcaption
+) .ja {
+  font-size: var(--type-small-size);
+  line-height: var(--type-lh-normal);
+}
+
+.card.article :where(
+  .head figcaption,
+  .detail figcaption
+) .en {
+  font-size: var(--type-micro-size);
+  line-height: var(--type-lh-compact);
+}
+
+/* Media
+----------------- */
+.card.article figure {
+  margin: 0;
+}
+
+.card.article img {
+  display: block;
+  inline-size: 100%;
+}
+
+.card.article figcaption {
+  margin-block-start: var(--element-gap-m);
+}
+
+.card.article :where(
+  .meta,
+  .types,
+  .roles,
+  .tools,
+  .client,
+  .industries
+) dd .value a {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+/* Layout
+----------------- */
+/* Body */
+.card.article > .body {
+  row-gap: var(--layout-section-gap-s);
+  margin-block-start: var(--layout-section-gap-s);
+}
+
+.card.article > .body:has(> .detail.textpair) {
+  margin-block-start: 0;
+}
+
+/* Detail */
+.card.article .detail {
+  margin: 0;
+}
+
+.card.article .detail figure + figure {
+  margin-block-start: var(--element-gap-m);
+}
+
+/* Textpair */
+.card.article .textpair .ja {
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-normal);
+}
+
+/* Aside
+----------------- */
+.card.article > .body > .aside {
+  row-gap: var(--element-gap-m);
+  margin: 0;
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-compact);
+}
+
+/* Meta
+----------------- */
+.card.article .meta {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: var(--element-gap-s);
+  row-gap: var(--element-gap-xs);
+  margin: 0;
+}
+
+.card.article .meta dd {
+  display: flex;
+  align-items: center;
+  column-gap: var(--element-gap-xs);
+}
+
+.card.article :where(
+  .meta dd,
+  :where(.types, .roles, .tools, .client, .industries) dd
+) {
+  min-inline-size: 0;
+}
+
+.card.article :where(
+  .meta dd .value,
+  :where(.types, .roles, .tools, .client, .industries) dd .value
+) {
+  display: block;
+  min-inline-size: 0;
+}
+
+.card.article .meta dd .value {
+  flex: 0 1 auto;
+  max-inline-size: 100%;
+}
+
+/* DL blocks
+----------------- */
+.card.article :where(
+  .types,
+  .roles,
+  .tools,
+  .client,
+  .industries
+) dt {
+  margin-block-end: var(--element-gap-xs);
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-compact);
+  color: var(--color-text-sub);
+}
+
+.card.article :where(
+  .types,
+  .roles,
+  .tools,
+  .client,
+  .industries
+) dd li {
+  display: flex;
+  min-inline-size: 0;
+}
+
+.card.article :where(
+  .types,
+  .roles,
+  .tools,
+  .client,
+  .industries
+) li + li {
+  margin-block-start: var(--element-gap-xs);
+}
+
+.card.article :where(
+  .types,
+  .roles,
+  .tools,
+  .client,
+  .industries
+) dd .value {
+  flex: 1 1 auto;
+}
+
+/* Group layout
+----------------- */
+.card.article :where(
+  .types-roles-tools,
+  .roles-tools,
+  .client-industries
+) {
+  row-gap: var(--element-gap-m);
+}
+
+/* Writing Style
+----------------- */
+.card.article.writing {
+  --writing-ja-size: 1.8rem;
+  --writing-ja-lh: 2;
+  --writing-en-size: var(--type-base-size);
+  --writing-en-lh: 2;
+}
+
+/* Head */
+.card.article.writing > .head {
+  display: flex;
+  flex-direction: column;
+  row-gap: var(--element-gap-l);
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-compact);
+}
+
+/* body */
+.card.article.writing .writing-content + .writing-summary {
+  margin-block-start: var(--space-14);
+}
+
+.card.article.writing .writing-content.ja {
+  font-size: var(--writing-ja-size);
+  line-height: var(--writing-ja-lh);
+}
+
+.card.article.writing .writing-summary.en {
+  font-size: var(--writing-en-size);
+  line-height: var(--writing-en-lh);
+  border-top: var(--divider-1);
+  padding-block-start: var(--shape-pad-xl);
+}
+
+.card.article.writing :is(.writing-content, .writing-summary) p {
+  margin-block: var(--space-10);
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: normal;
+}
+
+.card.article.writing .writing-content.ja p {
+  letter-spacing: normal;
+}
+
+.card.article.writing .writing-summary p {
+  margin-block: var(--element-gap-l);
+}
+
+.card.article.writing .writing-content h4 {
+  margin-block-start: var(--space-10);
+  font-size: var(--type-content-title-size);
+  line-height: 1.3;
+}
+
+.card.article.writing .writing-content h5 {
+  margin-block-start: var(--space-10);
+  font-size: 26px;
+  line-height: 1.5;
+}
+
+.card.article.writing .writing-content h6 {
+  margin-block-start: var(--space-10);
+  font-size: 22px;
+  line-height: 1.7;
+}
+
+.card.article.writing .writing-content figure {
+  margin-block-start: var(--space-10);
+  margin-block-end: var(--space-10);
+}
+
+.card.article.writing .writing-content figcaption {
+  margin-block-start: var(--element-gap-m);
+  text-align: center;
+  font-size: var(--type-base-size);
+  line-height: var(--type-lh-compact);
+}
+
+.card.article.writing .writing-content ul {
+  margin-block-start: var(--element-gap-l);
+  padding-inline-start: var(--space-6);
+  list-style: disc;
+}
+
+.card.article.writing .writing-content ol {
+  margin-block-start: var(--element-gap-l);
+  padding-inline-start: var(--space-6);
+  list-style: decimal;
+}
+
+.card.article.writing .writing-content li {
+  margin-block-end: var(--element-gap-s);
+  line-height: var(--type-lh-relaxed);
+}
+
+.card.article.writing .writing-content li ul,
+.card.article.writing .writing-content li ol {
+  margin-block-start: var(--element-gap-s);
+  padding-inline-start: var(--space-6);
+}
+
+.card.article.writing .writing-content li ul {
+  list-style: circle;
+}
+
+.card.article.writing .writing-content li ol {
+  list-style: decimal;
+}
+
+.card.article.writing .writing-content blockquote {
+  margin-block: var(--space-10);
+}
+
+.card.article.writing .writing-content blockquote p {
+  margin-block: 0;
+  padding: var(--shape-pad-xl);
+  background-color: var(--color-surface-elevated);
+  color: var(--color-text-sub);
+  line-height: var(--type-lh-relaxed);
+}
+
+.card.article.writing .writing-content blockquote cite {
+  display: block;
+  margin-block-start: var(--element-gap-s);
+  text-align: right;
+  font-size: var(--type-base-size);
+  color: var(--color-text-sub);
+}
+
+.card.article.writing .writing-content pre {
+  margin-block: var(--space-10);
+  padding: var(--shape-pad-xl);
+  border: var(--divider-1);
+  font-family: var(--font-mono);
+  line-height: var(--type-lh-relaxed);
+  overflow-x: auto;
+}
+
+.card.article.writing .writing-content pre code {
+  background-color: transparent;
+}
+
+/* Desktop (1024px〜)
+---------------------------------------- */
+@media (min-width: 1024px) {
+  .card.article.writing > .body {
+    justify-content: center;
+  }
+
+  .card.article.writing .detail {
+    inline-size: var(--layout-desktop-column-11);
+    min-inline-size: 0;
+    max-inline-size: var(--layout-desktop-column-11);
+  }
+
+  .card.article.writing > .head {
+    max-inline-size: var(--layout-desktop-column-11);
+    margin-inline: auto;
+  }
+}
+
+/* Tablet & Desktop (600px〜)
+---------------------------------------- */
+@media (min-width: 600px) {
+  /* Detail */
+  .card.article .detail figure + figure {
+    margin-block-start: var(--layout-section-gap-s);
+  }
+
+  /* Aside */
+  .card.article > .body > .aside {
+    row-gap: var(--layout-section-gap-s);
+  }
+
+  /* Group layout */
+  .card.article .roles-tools {
+    flex-direction: row;
+    column-gap: var(--layout-tablet-gap);
+    min-inline-size: 0;
+  }
+
+  .card.article .roles-tools > :is(
+    .roles,
+    .tools
+  ) {
+    flex: 1 1 0;
+    min-inline-size: 0;
+  }
+
+  .card.article .roles-tools :where(
+    .roles a,
+    .tools a
+  ) {
+    display: block;
+    overflow: hidden;
+    max-inline-size: 100%;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Tablet (600px〜1023px)
+---------------------------------------- */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .card.article > .body {
+    row-gap: var(--layout-section-gap-s);
+  }
+
+  .card.article > .body > .aside {
+    row-gap: var(--element-gap-m);
+  }
+}
+
+/* Desktop (1024px〜)
+---------------------------------------- */
+@media (min-width: 1024px) {
+  .card.article > .body {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    column-gap: var(--layout-desktop-gap);
+  }
+
+  .card.article .detail {
+    min-inline-size: 0;
+    max-inline-size: var(--layout-desktop-column-13);
+  }
+
+  .card.article > .body > .aside {
+    flex: 0 0 var(--layout-desktop-column-4);
+    row-gap: var(--element-gap-m);
+    min-inline-size: 0;
+    max-inline-size: var(--layout-desktop-column-4);
+  }
+
+  .card.article .roles-tools {
+    flex-direction: column;
+    row-gap: var(--element-gap-m);
+  }
+
+  .card.article > .body > .detail:not(.textpair) + .aside {
+    margin-block-end: var(--layout-section-gap-s);
+  }
+}
+
+/* Desktop (1024px〜1216px)
+---------------------------------------- */
+@media (min-width: 1024px) and (max-width: 1216px) {
+  .card.article > .body {
+    column-gap: var(--layout-desktop-gap);
+  }
+
+  .card.article .detail {
+    flex: 1 1 auto;
+    max-inline-size: none;
+  }
+}

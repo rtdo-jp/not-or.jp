@@ -64,7 +64,7 @@
         </header>
         <div class="body">
           <header class="title">
-            <h2><span class="character-line"><?php echo esc_html($title_en); ?></span></h2>
+            <h2 lang="en"><span class="character-line"><?php echo esc_html($title_en); ?></span></h2>
             <p class="ja" lang="ja"><?php echo esc_html($title_ja); ?></p>
           </header>
           <div class="detail">

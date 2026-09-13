@@ -81,7 +81,7 @@
 
     $render_term_label = function($term, bool $is_tools_group) {
       if (!$term || is_wp_error($term) || !($term instanceof WP_Term)) return '';
-      if (!$is_tools_group) return esc_html($term->name);
+      if (!$is_tools_group) return nor_render_label_with_abbr((string) $term->name);
       return nor_render_work_tag_tool_label($term);
     };
 
@@ -95,7 +95,16 @@
       return '<span class="character-line">' . esc_html($label) . '</span>';
     };
 
-    $render_desc = 'nor_render_desc_with_br';
+    // B "Inline rich text": card-taxonomy.php's description paragraphs are
+    // not wrapped in an outer <a> (only the title is), so <a> stays a real
+    // link here. Plain <br> (not the hero's responsive "desktop tablet"
+    // class) to keep the existing line-break layout unchanged.
+    $desc_abbr_map = function_exists('nor_get_abbreviation_map') ? nor_get_abbreviation_map() : [];
+    $render_desc = function (string $raw) use ($desc_abbr_map): string {
+      return function_exists('nor_render_inline_rich_text')
+        ? nor_render_inline_rich_text($raw, $desc_abbr_map, '', false, '<br/>')
+        : nor_render_desc_with_br($raw);
+    };
 
     // More link: go to the tag-group term archive in work_tag (/tags/{group-slug}/)
     $more_href_for_group = function($group_term) {
@@ -111,7 +120,14 @@
   $list_body_html = '';
   foreach ($groups as $g) {
     $group_term = $get_group_term($g['slug']);
-    $jp_desc = $group_term ? (string) $group_term->description : '';
+    // Raw context: get_terms()'s own ->description can come back through
+    // display-time filtering (which strips markup like <abbr>), so the B
+    // renderer below must start from the actual stored value instead.
+    $jp_desc = '';
+    if ($group_term instanceof WP_Term) {
+      $jp_desc_raw = get_term_field('description', (int) $group_term->term_id, $group_term->taxonomy, 'raw');
+      $jp_desc = is_wp_error($jp_desc_raw) ? '' : (string) $jp_desc_raw;
+    }
     $en_desc = $get_en_desc($group_term);
 
     $children = $get_children($group_term ? (int) $group_term->term_id : 0);

@@ -24,7 +24,7 @@ if ($year <= 0 || $year_url === '') {
 
 $updated_html = '';
 if ($lu) {
-  $updated_html = 'Last updated:<time datetime="' . esc_attr((string) ($lu['dt'] ?? '')) . '" class="value">' . esc_html((string) ($lu['d'] ?? '')) . '</time>';
+  $updated_html = 'Last updated: <time datetime="' . esc_attr((string) ($lu['dt'] ?? '')) . '" class="value">' . esc_html((string) ($lu['d'] ?? '')) . '</time>';
   if (!empty($lu['is_new'])) {
     $updated_html .= '<span class="new">New</span>';
   }

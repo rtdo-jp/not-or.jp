@@ -117,7 +117,13 @@
       'state_html'  => $state_html,
       'state_indent' => 8,
     ];
-    $hero_args['breadcrumbs'] = nor_build_single_breadcrumb($title);
+    // Breadcrumb: while searching, fold the (already-sanitized) search
+    // keyword into the single current crumb ("Search - {$q}") rather than
+    // adding it as its own hierarchy level; pagination doesn't change $q,
+    // so page 2+ naturally keeps the same crumb without a page-number one.
+    $hero_args['breadcrumbs'] = $is_search
+      ? nor_build_single_breadcrumb($title . ' - ' . $q)
+      : nor_build_single_breadcrumb($title);
 
     $hero_html = nor_render_template_part('template-parts/hero/hero-pages', null, $hero_args, [
       'trim' => 'left',
@@ -126,7 +132,6 @@
     ]);
     echo $hero_html;
 
-    $result_keyword = $is_search ? $q : 'All';
     ob_start();
       if ($display_q->have_posts()) {
         while ($display_q->have_posts()) {
@@ -134,7 +139,7 @@
 
           $post_id = get_the_ID();
           $work_no = (int) get_post_meta($post_id, 'nor_work_no', true);
-          $num = str_pad((string) max(0, $work_no), 3, '0', STR_PAD_LEFT);
+          $num = nor_format_seq_no(max(0, $work_no));
 
           $card_data = nor_get_work_card_data((int) $post_id, [
             'client_mode'              => 'meta',
@@ -171,39 +176,43 @@
         }
 
         // ===== Pagination =====
-        // Keep pagination visible even when total_pages is 1.
-        $total_pages = (int) ($display_q->max_num_pages ?? 1);
-        if ($total_pages < 1) $total_pages = 1;
+        // Only shown while searching ($q set): the unsearched default view
+        // is a single implicit "latest works" landing, not a browsable
+        // archive, so page 2+ has no entry point and isn't linked here.
+        if ($is_search) {
+          $total_pages = (int) ($display_q->max_num_pages ?? 1);
+          if ($total_pages < 1) $total_pages = 1;
 
-        $page_url = function (int $n) use ($q): string {
-          $u = get_pagenum_link($n);
-          if ($q !== '') {
-            $u = add_query_arg('q', $q, $u);
+          $page_url = function (int $n) use ($q): string {
+            $u = get_pagenum_link($n);
+            if ($q !== '') {
+              $u = add_query_arg('q', $q, $u);
+            }
+            return (string) $u;
+          };
+
+          $pagination_args = nor_build_list_pagination_args(
+            (int) $paged,
+            (int) $total_pages,
+            $page_url,
+            [
+              'aria_label'      => 'Works pagination',
+              'next_rel'        => 'next',
+              'prev_rel'        => 'prev',
+              'show_first_prev' => true,
+              'show_next_last'  => true,
+            ]
+          );
+
+          $pagination_html = nor_render_template_part('template-parts/pagination/pagination-list', null, $pagination_args, [
+            'trim' => 'both',
+            'strip_leading_spaces' => 6,
+            'indent' => 6,
+            'suffix' => "\n\n",
+          ]);
+          if ($pagination_html !== '') {
+            echo $pagination_html;
           }
-          return (string) $u;
-        };
-
-        $pagination_args = nor_build_list_pagination_args(
-          (int) $paged,
-          (int) $total_pages,
-          $page_url,
-          [
-            'aria_label'      => 'Works pagination',
-            'next_rel'        => 'next',
-            'prev_rel'        => 'prev',
-            'show_first_prev' => true,
-            'show_next_last'  => true,
-          ]
-        );
-
-        $pagination_html = nor_render_template_part('template-parts/pagination/pagination-list', null, $pagination_args, [
-          'trim' => 'both',
-          'strip_leading_spaces' => 6,
-          'indent' => 6,
-          'suffix' => "\n\n",
-        ]);
-        if ($pagination_html !== '') {
-          echo $pagination_html;
         }
 
         wp_reset_postdata();
@@ -221,9 +230,8 @@
     $list_body_html = (string) ob_get_clean();
     echo nor_render_list_section_shell([
       'section_class' => 'list-works',
-      'section_h2_ja' => 'キーワードで絞り込んだ制作記録',
-      'section_h2_en' => 'Works filtered by keyword: ' . $result_keyword,
-      'section_h2_en_html' => 'Works filtered by keyword: <span class="result-keyword">' . esc_html($result_keyword) . '</span>',
+      'section_h2_ja' => '制作記録一覧',
+      'section_h2_en' => 'Works',
       'body_html' => $list_body_html,
     ], [
       'trim' => 'left',

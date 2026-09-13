@@ -5,6 +5,11 @@ if ($is_contact_page) :
 ?>
 <footer id="site-foot">
   <div class="inner">
+    <div class="mode-select">
+      <button class="btn" type="button" data-mode-cycle>
+        <span class="mode-select-icon" aria-hidden="true">🌗</span> <span class="mode-select-label" aria-live="polite">Mode: System</span>
+      </button>
+    </div>
     <p class="copyright"><small>© 2013–<?php echo date('Y'); ?> nør. All Rights Reserved.</small></p>
   </div>
 </footer>
@@ -92,7 +97,7 @@ endif;
       <div class="biography">
         <div class="textpair">
           <p class="ja" lang="ja"><time datetime="2004">2004年</time>、北海道芸術デザイン専門学校卒業。同年、札幌のデザイン制作会社「株式会社オズ」に入社し、グラフィックデザイン及びWebデザインに従事。その後「株式会社ルーラー」にてWebデザイン及び<abbr title="User Interface">UI</abbr>デザインを中心にディレクターとして経験を積む。<time datetime="2012">2012年</time>、独立し「田村綾佑デザイン事務所」を設立。<time datetime="2014">2014年</time>より「ビットスター株式会社」にて執行役員を務め、制作部門の運営及び経営に携わる。現在、同社でデザインプロデュース及びディレクションを担当するほか、田村綾佑デザイン事務所「<dfn>nør.</dfn>」ではグラフィックデザイン・Webデザインを中心に制作活動を行う。</p>
-          <p class="en" lang="en">Ryousuke Tamura graduated from Hokkaido College of Art &amp; Design in <time datetime="2004">2004</time>. He began his career at Oz Inc. in Sapporo, engaging in graphic and web design, then joined Ruler Inc. as a director focusing on web and <abbr title="User Interface">UI</abbr> design. In <time datetime="2012">2012</time>, he founded Ryousuke Tamura Design Office. Since <time datetime="2014">2014</time>, he has served as an executive officer at Bitstar Inc., overseeing the creative division and business operations. Currently, he leads design production and direction at Bitstar, while working independently under “<dfn>nør.</dfn>”</p>
+          <p class="en" lang="en">Ryousuke Tamura graduated from Hokkaido College of Art &amp; Design in <time datetime="2004">2004</time>. He began his career at Oz Inc. in Sapporo, engaging in graphic and web design, then joined Ruler Inc. as a director focusing on web and <abbr title="User Interface">UI</abbr> design. In <time datetime="2012">2012</time>, he founded Ryousuke Tamura Design Office. Since <time datetime="2014">2014</time>, he has served as an executive officer at Bitstar Inc., overseeing the creative division and business operations. Currently, he leads design production and direction at Bitstar, while working independently under “<dfn>nør.</dfn>”.</p>
         </div>
 
         <div class="signature">
