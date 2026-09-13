@@ -1103,7 +1103,6 @@
 <?php endif; ?>
 <?php if ($has_social_meta) : ?>
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:site" content="@not-or">
 <?php if ($social_title !== '') : ?>
 <meta name="twitter:title" content="<?php echo esc_attr($social_title); ?>">
 <?php endif; ?>
